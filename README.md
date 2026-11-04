@@ -205,19 +205,3 @@ which is handy for containers and throwaway runs:
 - **Repository not found** — owner and name are case-sensitive after
   normalization; check the listing endpoint.
 - **Port already in use** — set `PORT` or change `port` in `settings.json`.
-
-## npm package
-
-The server is published as the `microgit-server` npm package (see **Install** above for
-the install command). After installation the `microgit-server` binary is available:
-
-```bash
-microgit-server                 # start the server (uses settings.json in CWD)
-microgit-server --settings      # open the interactive settings editor
-microgit-server -s              # shorthand for --settings
-microgit-server settings        # same as --settings
-```
-
-The `--settings` flag opens a terminal menu to edit `settings.json`: pick a
-setting by number, enter a new value, or press `h` for a help screen describing
-every option. Press `0` to save and exit, `q` to discard.
