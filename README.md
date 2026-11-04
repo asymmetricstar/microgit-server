@@ -1,13 +1,7 @@
 # microgit
-
-A small Git smart-HTTP server written in TypeScript. Every repository belongs to an
-account and is addressed as `/<user>/<repository>.git`, so two people can each have
-their own `app` without colliding. Accounts, sessions and the audit trail live in
-SQLite, the HTTP layer is Express, and signing in keeps a server side session in an
-`HttpOnly` cookie.
+Lightweight Http Git Server.
 
 ## Install
-
 ```bash
 npm install -g microgit-server
 ```
@@ -35,31 +29,22 @@ machine that talks to the server:
 
 ```bash
 npm install -g microgit-cli
-microgit login --url http://127.0.0.1:80 --user Abby --password 1234
+
+# 1. Register an account (non-interactive example).
+microgit register --url http://127.0.0.1:80 --user abc --password 1234
+# 2. Sign in (non-interactive example).
+microgit login --url http://127.0.0.1:80 --user abc --password 1234
+# 3. Create a repository and a local checkout with a first commit,
+#    then push it.
 microgit new app --init
+# 4. Work as usual; commit also pushes.
 cd app
-microgit commit -m "First change"
+echo "hello" > hello.txt
+microgit commit -m "Add hello.txt"
+# 5. Check the session or list repositories.
+microgit whoami
+microgit list
 ```
-
-See [`cli/README.md`](cli/README.md) for every command, the config file and how
-the API token differs from the git password. Every command the server exposes
-(register, login, new, delete, list, clone, push, pull, whoami, audit, ...) is
-reachable through it, and it stores the session token and git password in
-`~/.microgit/config.json`. The `cli/` folder in this repository is the source of
-that package; to work on it locally run `npm install && npm run build` inside it.
-
-## What lives on disk
-
-```
-repos/<sha256(user + "\n" + name)>/<name>.git   bare repository
-data/users.db                                   accounts, sessions, audit trail
-data/repo.db                                    repository catalogue and owners
-settings.json                                   server settings (admin only)
-```
-
-The hash is an internal folder name and is **never** returned by the API. A URL,
-a listing entry and every error message speak in `owner/name` terms only.
-
 
 ## Repository page
 
@@ -236,6 +221,3 @@ microgit-server settings        # same as --settings
 The `--settings` flag opens a terminal menu to edit `settings.json`: pick a
 setting by number, enter a new value, or press `h` for a help screen describing
 every option. Press `0` to save and exit, `q` to discard.
-
-The companion command line client is a **separate** package:
-`npm install -g microgit-cli`.
