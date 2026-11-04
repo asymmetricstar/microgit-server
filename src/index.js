@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import path from 'node:path';
 import { purgeExpiredSessions } from './accounts/sessions.js';
 import { ensureAdminExists } from './accounts/users.js';

@@ -7,7 +7,7 @@ import path from 'node:path';
 const SETTINGS_FILE = path.resolve(process.cwd(), process.env.GIT_SETTINGS_FILE ?? 'settings.json');
 const DEFAULTS = {
     host: '127.0.0.1',
-    brand: 'litegit',
+    brand: 'Microgit',
     tagline: '',
     port: 3000,
     reposDir: 'repos',

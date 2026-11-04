@@ -6,12 +6,6 @@ their own `app` without colliding. Accounts, sessions and the audit trail live i
 SQLite, the HTTP layer is Express, and signing in keeps a server side session in an
 `HttpOnly` cookie.
 
-## Requirements
-
-- Node.js 24+ (uses the built-in `node:sqlite`)
-- `git` in `PATH`
-- `bash` only for running the test suite
-
 ## Install
 
 ```bash
@@ -25,13 +19,6 @@ microgit-server                  # uses settings.json in the current directory
 microgit-server --settings       # open the interactive settings editor
 microgit-server -s               # shorthand for --settings
 microgit-server settings         # same as --settings
-```
-
-From a source checkout:
-
-```bash
-npm run dev                      # auto-reload (tsx watch)
-npm test                         # end-to-end suite (127 checks)
 ```
 
 The `--settings` flag opens a terminal menu to edit `settings.json`: pick a
@@ -48,7 +35,7 @@ machine that talks to the server:
 
 ```bash
 npm install -g microgit-cli
-microgit login --url http://127.0.0.1:3000 --save-password
+microgit login --url http://127.0.0.1:80 --user Abby --password 1234
 microgit new app --init
 cd app
 microgit commit -m "First change"
@@ -73,56 +60,6 @@ settings.json                                   server settings (admin only)
 The hash is an internal folder name and is **never** returned by the API. A URL,
 a listing entry and every error message speak in `owner/name` terms only.
 
-## Source layout
-
-```
-src/index.ts            settings, storage, sessions, listen, shutdown
-src/config/             settings.json + env overrides, paths, MOTD, version
-src/data/               SQLite connections and schemas, audit trail, TTL cache
-src/accounts/           users and administrators, session lifecycle
-src/repositories/       naming, storage catalogue, create, delete
-src/git/                git URL parsing, git http-backend, repository inspection
-src/http/               Express app, dispatcher, request/response/session helpers
-src/http/handlers/      one module per endpoint group (auth, account, repos, ...)
-src/http/pages/         server rendered landing/repository pages, markdown, HTML escaping
-src/security/           scrypt passwords, tokens, Basic/Bearer header parsing
-src/settings-cli.ts     interactive settings editor (terminal UI)
-```
-
-## Overview
-
-- **Accounts** — `POST /api/register` creates one; the first account becomes an
-  administrator. Registration stays open until `allowRegistration` is set to
-  `false` in `settings.json`.
-- **Sessions** — `POST /api/login` returns a token and an `HttpOnly` `sid` cookie;
-  `GET /api/me` reports the current account; `POST /api/logout` revokes. Tokens
-  expire after `sessionDays` days.
-- **Repositories** — `POST /api/new` creates `owner/name` (lower-cased, slugified);
-  `POST /api/delete` or `DELETE /api/repos/<owner>/<name>` removes one. Push
-  always authenticates with the account username and password; private
-  repositories hide reads from everyone but the owner and administrators.
-- **Listing** — `GET /api/repos` with `owner`, `name`, `private`, `page` and
-  `limit` (max 200) filters.
-- **Audit trail** — every create, delete, registration, login, logout, push and
-  refused read is recorded in `users.db`; administrators read it via
-  `GET /api/audit?format=json|html`.
-- **Accounts admin** — `GET /api/users` and `PATCH /api/users/<username>` (admin
-  only) list and toggle the admin flag. Admin rights live only in
-  `users.is_admin`; editing `settings.json` never promotes an account. The last
-  administrator cannot be demoted. If no administrator exists (restored database),
-  the oldest account is promoted at startup.
-- **MOTD** — `motd` in `settings.json` is returned after sign-in and by
-  `GET /api/settings`; it is a greeting for CLI and terminal clients and is never
-  shown on the landing page.
-
-Detailed request/response examples will be published in a separate document.
-
-## Landing page
-
-`GET /` is a small HTML page rather than JSON: it shows the server brand, the
-configured MOTD, the sign-in command and the clone URL to use. Every address in
-it comes from `domain` or `publicUrl` when one of them is set, so you can browse
-and copy the clone URL without hand-editing the IP.
 
 ## Repository page
 
@@ -213,7 +150,7 @@ or edit the file directly.
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `host` | `"127.0.0.1"` | Bind address (loopback keeps it private) |
-| `brand` | `"litegit"` | Name in the page header, the HTML title and the footer |
+| `brand` | `"Microgit"` | Name in the page header, the HTML title and the footer |
 | `tagline` | `""` | Word after the brand in the header; empty shows only the brand |
 | `port` | `3000` | TCP port to listen on |
 | `reposDir` | `"repos"` | Where bare repositories are stored |
