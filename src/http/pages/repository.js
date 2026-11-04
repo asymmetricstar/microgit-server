@@ -1135,10 +1135,11 @@ export function cloneControls(cloneUrl) {
 })();
 </script>`;
 }
-export function shell(title, body) {
+export function shell(title, body, headerRight) {
     // Brand and tagline come from settings.json, never from this file; the tab
     // title is the page name followed by the brand.
     const { brand } = getSettings();
+    const right = headerRight !== undefined ? headerRight : '<a class="header-link" href="/#quickstart">Quick start</a>';
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -1149,7 +1150,7 @@ export function shell(title, body) {
 <style>${STYLES}${LAYOUT_CSS}</style>
 </head>
 <body>
-${siteHeader('page-wide', '<a class="header-link" href="/#quickstart">Quick start</a>')}
+${siteHeader('page-wide', right)}
 <div class="lite-container">
 ${body}
 </div>
@@ -1208,7 +1209,8 @@ export function repositoryPage(data) {
 ${breadcrumbBar(data)}
 ${file ? previewBox(data, file) : `${list}${readmeBox(data)}`}
 `;
-    return shell(label, body);
+    const headerRight = `<a class="header-link" href="${escapeHtml(repoUrl(data.owner, data.name))}">${escapeHtml(label)}</a>`;
+    return shell(label, body, headerRight);
 }
 /** Plain 404/500 page in the same shell, used instead of a JSON error. */
 export function errorPage(title, message) {

@@ -16,7 +16,8 @@ function readPackageVersion() {
         return packageJson.version;
     }
     catch (error) {
-        console.error("readPackageVersion: failed to read or parse package.json at", PACKAGE_JSON_PATH, "-", error.message);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("readPackageVersion: failed to read or parse package.json at", PACKAGE_JSON_PATH, "-", errorMessage);
         return DEFAULT_VERSION;
     }
 }
