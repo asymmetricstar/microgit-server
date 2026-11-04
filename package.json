@@ -5,7 +5,7 @@
     "settings.json",
     "README.md"
   ],
-  "version": "0.4.8",
+  "version": "0.4.13",
   "description": "Lightweight self-hosted git server , per-account repositories, SQLite accounts, templates and an audit trail",
   "dependencies": {
     "express": "^5.3.0"
