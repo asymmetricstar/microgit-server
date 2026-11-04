@@ -1,0 +1,17 @@
+{
+  "host": "127.0.0.1",
+  "brand": "Microgit",
+  "tagline": "lightweight git service",
+  "port": 80,
+  "reposDir": "repos",
+  "dataDir": "data",
+  "publicUrl": "",
+  "domain": "",
+  "trustProxy": false,
+  "motd": "MicroGit Server v1.0.2 - Welcome to git cli!\n",
+  "allowRegistration": true,
+  "template": "",
+  "sessionDays": 7,
+  "maxPushBytes": 0,
+  "cacheTtlMs": 5000
+}

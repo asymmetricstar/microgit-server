@@ -1,0 +1,35 @@
+{
+  "name": "microgit-server",
+  "version": "0.4.1",
+  "description": "Git smart HTTP server with per-account repositories, SQLite accounts, templates and an audit trail",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "microgit-server": "src/index.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "settings": "node src/index.js --settings"
+  },
+  "files": [
+    "src",
+    "assets",
+    "settings.json",
+    "README.md"
+  ],
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "keywords": [
+    "git",
+    "git-server",
+    "smart-http",
+    "self-hosted",
+    "microgit"
+  ],
+  "author": "",
+  "license": "MIT"
+}
