@@ -2,7 +2,7 @@ import { getSettings } from '../../config/settings.js';
 import { SERVER_VERSION } from '../../config/version.js';
 import { escapeHtml } from './html.js';
 import { LAYOUT_CSS, siteFooter, siteHeader } from './layout.js';
-const STYLE = `:root{color-scheme:light;--bg:#ffffff;--bg-subtle:#f6f8fa;--border:#d0d7de;--text:#24292f;--text-secondary:#656d76;--text-black:#1f2328;--blue:#0969da;--blue-light:#ebf2ff}
+const STYLE = `:root{color-scheme:light;--bg:#ffffff;--bg-subtle:#f6f8fa;--border:#d0d7de;--text:#24292f;--text-secondary:#656d76;--text-black:#1f2328;--blue:#0969da;--blue-light:#ebf2ff;--green:#328845;--green-light:#d0f0c0}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
@@ -29,7 +29,9 @@ a:hover{color:var(--blue)}
 .readme p{margin:0 0 10px}
 .readme .readme-h1{margin:0 0 10px;font-weight:600;color:var(--text-black)}
 .readme .readme-h2{margin:22px 0 8px;font-weight:600;color:var(--text-black)}
+.readme .comment{color:var(--green);font-size:13px;line-height:1.75}
 .readme code.inline{padding:1px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg-subtle);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--text-black)}
+.readme pre{margin:10px 0 0;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;background:var(--bg-subtle);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.7;color:var(--text-black);white-space:pre-wrap;word-break:break-word}
 .cmd{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;background:var(--bg-subtle);box-shadow:0 1px 2px rgba(31,35,40,.04);transition:border-color .15s ease,box-shadow .15s ease}
 .cmd:hover{border-color:var(--blue);box-shadow:0 2px 8px rgba(9,105,218,.10)}
 .cmd code{flex:1;min-width:0;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.7;color:var(--text-black);white-space:pre-wrap;word-break:break-word}
@@ -67,9 +69,7 @@ const COPY_SCRIPT = `document.querySelectorAll('.copy').forEach(function (button
 export function landingPage(base, stats) {
     const { brand, tagline, sessionDays } = getSettings();
     const cloneCommand = `git clone ${base}/<user>/<repo>.git`;
-    const cliInstallCommand = `npm i microgit-cli`;
-    const cliLoginCommand = `microgit login --url ${base}`;
-    const cliNewCommand = `microgit new app --init`;
+    const cliInstallCommand = `npm i -g microgit-cli`;
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -109,9 +109,7 @@ ${siteHeader('wrap', '<a class="header-link" href="#quickstart">Quick start</a>'
       <div class="card-body">
         <div class="readme">
           <p class="readme-h1"># ${escapeHtml(brand)}</p>
-          <p>A small Git smart-HTTP server. Every repository belongs to an account, is addressed as
-<code class="inline">owner/name.git</code> and is pushed with the account credentials. Sessions are
-kept server side and expire after ${sessionDays} ${sessionDays === 1 ? 'day' : 'days'}.</p>
+          <p><strong>A lightweight Git smart-HTTP server.</strong> Each repository belongs to an account, is addressed as <code class="inline">owner/name.git</code>, and is pushed using that account's credentials. Sessions are stored server-side and expire after ${sessionDays} ${sessionDays === 1 ? 'day' : 'days'}.</p>
           <p class="readme-h2">## Clone a repository</p>
           <div class="cmd">
             <code>${escapeHtml(cloneCommand)}</code>
@@ -139,20 +137,27 @@ kept server side and expire after ${sessionDays} ${sessionDays === 1 ? 'day' : '
           <p>The <code class="inline">microgit</code> command is the companion CLI
           for this server: it signs in, creates and deletes repositories, and wraps
           the usual git commands so push and pull work with your account
-          credentials. Install it from npm, then sign in and create your first
-          repository:</p>
+          credentials. Install it from npm:</p>
           <div class="cmd">
             <code>${escapeHtml(cliInstallCommand)}</code>
             <button class="copy" type="button" data-copy="${escapeHtml(cliInstallCommand)}">Copy</button>
           </div>
-          <div class="cmd">
-            <code>${escapeHtml(cliLoginCommand)}</code>
-            <button class="copy" type="button" data-copy="${escapeHtml(cliLoginCommand)}">Copy</button>
-          </div>
-          <div class="cmd">
-            <code>${escapeHtml(cliNewCommand)}</code>
-            <button class="copy" type="button" data-copy="${escapeHtml(cliNewCommand)}">Copy</button>
-          </div>
+          <p></p>
+          <p class="readme-h1"># Push your first repository</p>
+          <p class="comment"># 1. Register an account (non-interactive example).</p>
+          <p><code class="inline">microgit register --url http://127.0.0.1:80 --user abc --password 1234</code></p>
+          <p class="comment"># 2. Sign in (non-interactive example).</p>
+          <p><code class="inline">microgit login --url http://127.0.0.1:80 --user abc --password 1234</code></p>
+          <p class="comment"># 3. Create a repository and a local checkout with a first commit,</p>
+          <p class="comment">#    then push it.</p>
+          <p><code class="inline">microgit new app --init</code></p>
+          <p class="comment"># 4. Work as usual; commit also pushes.</p>
+          <p><code class="inline">cd app</code></p>
+          <p><code class="inline">echo "hello" &gt; hello.txt</code></p>
+          <p><code class="inline">microgit commit -m "Add hello.txt"</code></p>
+          <p class="comment"># 5. Check the session or list repositories.</p>
+          <p><code class="inline">microgit whoami</code></p>
+          <p><code class="inline">microgit list</code></p>
         </div>
       </div>
     </div>

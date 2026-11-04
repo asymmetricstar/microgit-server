@@ -30,26 +30,33 @@ async function main() {
         const address = server.address();
         const port = typeof address === 'object' && address !== null ? address.port : config.port;
         const origin = config.publicUrl || `http://${config.host}:${port}`;
-        const label = (text) => `  ${text.padEnd(12)}`;
-        const brand = settings.tagline === ''
-            ? settings.brand
-            : `${settings.brand} — ${settings.tagline}`;
         console.log();
-        console.log(`  ${brand} ${SERVER_VERSION}`);
+        console.log('         μ━━━━┳━━━●  Microgit');
+        console.log(`              ┣━━━●  ${SERVER_VERSION} — Lightweight self-hosted git server`);
+        console.log('              ┗━━━●  your own git server - clone, push, host.');
         console.log();
-        console.log(`${label('Listening')} ${origin}`);
-        console.log(`${label('Clone')} ${origin}/<user>/<repo>.git`);
-        console.log(`${label('Repos')} ${config.reposRoot}`);
-        console.log(`${label('Data')} ${config.dataDir}`);
-        console.log(`${label('Settings')} ${config.settingsFile}`);
-        console.log(`${label('Sessions')} ${settings.sessionDays} days`);
-        console.log(`${label('Registration')} ${settings.allowRegistration ? 'open' : 'closed'}`);
-        console.log(`${label('Template')} ${settings.template === '' ? 'none' : path.resolve(process.cwd(), settings.template)}`);
-        console.log(`${label('MOTD')} ${settings.motd.trim() === '' ? 'none' : 'set'}`);
+        console.log('  ┌─ Services');
+        console.log(`  │  Listening: ${origin}`);
+        console.log(`  │  Clone:    ${origin}/<user>/<repo>.git`);
+        console.log('  └────────────────');
+        console.log();
+        console.log('  ┌─ Storage');
+        console.log(`  │  Repos:    ${config.reposRoot}`);
+        console.log(`  │  Data:     ${config.dataDir}`);
+        console.log(`  │  Settings: ${config.settingsFile}`);
+        console.log('  └────────────────');
+        console.log();
+        console.log('  ┌─ Preferences');
+        console.log(`  │  Sessions:      ${settings.sessionDays} days`);
+        console.log(`  │  Registration:  ${settings.allowRegistration ? 'open' : 'closed'}`);
+        console.log(`  │  Template:      ${settings.template === '' ? 'none' : path.resolve(process.cwd(), settings.template)}`);
+        console.log(`  │  MOTD:          ${settings.motd.trim() === '' ? 'none' : 'set'}`);
+        console.log('  └────────────────');
+        console.log();
         if (promoted) {
-            console.log(`${label('Notice')} '${promoted}' was promoted to administrator (none was left)`);
+            console.log(`  Notice: '${promoted}' was promoted to administrator (none was left)`);
+            console.log();
         }
-        console.log();
         console.log('  Press Ctrl+C to stop.');
         console.log();
     });

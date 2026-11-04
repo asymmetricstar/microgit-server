@@ -1,5 +1,5 @@
 # microgit
-Lightweight Http Git Server.
+Lightweight self-hosted git server
 
 ## Install
 ```bash
@@ -27,9 +27,12 @@ and deletes repositories, and wraps `git` so push and pull use your account
 credentials automatically. Published separately so it can be installed on any
 machine that talks to the server:
 
+## Install
 ```bash
 npm install -g microgit-cli
-
+```
+## Push your first repository
+```sh
 # 1. Register an account (non-interactive example).
 microgit register --url http://127.0.0.1:80 --user abc --password 1234
 # 2. Sign in (non-interactive example).
@@ -45,6 +48,7 @@ microgit commit -m "Add hello.txt"
 microgit whoami
 microgit list
 ```
+
 
 ## Repository page
 
@@ -182,26 +186,6 @@ Precedence for the public origin is `PUBLIC_URL` (environment) → `publicUrl` �
 `publicUrl` or `domain`; if `publicUrl` is already set, it wins. Restart the
 server after changing either one.
 
-## Environment variables (overrides)
 
-Everything above belongs in `settings.json`. The environment only overrides it,
-which is handy for containers and throwaway runs:
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PORT`, `HOST` | `3000`, `127.0.0.1` | Listen address |
-| `GIT_REPOS_DIR` | `repos` | Where bare repositories are stored |
-| `GIT_DATA_DIR` | `data` | Where the SQLite files are stored |
-| `GIT_SETTINGS_FILE` | `settings.json` | Settings file path |
-| `PUBLIC_URL` | empty | Origin used in clone URLs; wins over `domain` |
-| `TRUST_PROXY` | `0` | Read `X-Forwarded-Proto/Host/For` from a reverse proxy |
-
-## Troubleshooting
-
-- **`Authentication failed` on push** — use the account username/password, not a
-  token.
-- **`401` after login in a script** — pass the session cookie or a Bearer token;
-  curl does not keep the `sid` cookie between calls by itself.
-- **Repository not found** — owner and name are case-sensitive after
-  normalization; check the listing endpoint.
-- **Port already in use** — set `PORT` or change `port` in `settings.json`.
+## curl (manuel commit,push,pull) 
+Read to `manuel-git-usage.md`

@@ -5,8 +5,8 @@
     "settings.json",
     "README.md"
   ],
-  "version": "0.4.5",
-  "description": "Git smart HTTP server with per-account repositories, SQLite accounts, templates and an audit trail",
+  "version": "0.4.8",
+  "description": "Lightweight self-hosted git server , per-account repositories, SQLite accounts, templates and an audit trail",
   "dependencies": {
     "express": "^5.3.0"
   },
