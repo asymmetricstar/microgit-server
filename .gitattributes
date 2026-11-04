@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+node_modules/
+dist/
+repos/
+data/
+settings.json
+test/.tmp/
+*.log
+.env
+
