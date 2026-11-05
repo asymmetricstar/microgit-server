@@ -24,7 +24,6 @@ export async function verifyPassword(password, stored) {
     const derived = Buffer.from(await hashPassword(password, stored.salt), 'hex');
     const expected = Buffer.from(stored.hash, 'hex');
     if (derived.length !== expected.length) {
-        timingSafeEqual(derived, derived); // comparable work, then fail
         return false;
     }
     return timingSafeEqual(derived, expected);

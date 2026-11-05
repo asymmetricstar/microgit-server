@@ -46,7 +46,7 @@ export async function route(req, res) {
     // Generic asset route: /assets/<file> (e.g. /assets/cli-terminal.png).
     if (pathname.startsWith('/assets/') && isRead) {
         const file = pathname.slice('/assets/'.length);
-        if (file === '' || file.includes('/') || file.includes('\\\\')) {
+        if (file === '' || file.includes('/') || file.includes('\\')) {
             throw new RepoError(404, 'Not found');
         }
         const contentType = file.endsWith('.png')

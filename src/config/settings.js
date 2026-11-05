@@ -52,9 +52,9 @@ function normalize(raw) {
         motd: text('motd'),
         allowRegistration: bool('allowRegistration'),
         template: text('template').trim(),
-        sessionDays: number('sessionDays') || DEFAULTS.sessionDays,
+        sessionDays: integer('sessionDays', 0, 365, DEFAULTS.sessionDays),
         maxPushBytes: number('maxPushBytes'),
-        cacheTtlMs: number('cacheTtlMs') || DEFAULTS.cacheTtlMs,
+        cacheTtlMs: integer('cacheTtlMs', 0, 86_400_000, DEFAULTS.cacheTtlMs),
     };
 }
 /** Create `settings.json` if it does not exist, so an admin can edit it. */

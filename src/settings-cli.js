@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import readline from 'node:readline';
 import { getSettings, settingsFilePath, ensureSettingsFile } from './config/settings.js';
 import { SERVER_VERSION } from './config/version.js';
+import { sanitizeObject } from './util/safe.js';
 const colour = Boolean(process.stdout.isTTY) && process.env.NO_COLOR === undefined;
 const paint = (spec) => (text) => colour ? `\u001b[${spec}m${text}\u001b[0m` : text;
 const faint = paint('38;5;240');
@@ -30,7 +31,7 @@ function logo() {
 function readSettingsRaw() {
     const file = settingsFilePath();
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
+        return sanitizeObject(JSON.parse(fs.readFileSync(file, 'utf8')));
     }
     catch {
         return {};
@@ -67,6 +68,7 @@ function showHelp() {
     console.log(`  ${dim('Values are written to settings.json. host/port/dataDir/reposDir need a restart.')}`);
     console.log('');
 }
+/** Interactive (or piped) settings editor. Zero external dependencies. */
 export async function runSettingsEditor() {
     ensureSettingsFile();
     const raw = readSettingsRaw();
@@ -108,99 +110,97 @@ export async function runSettingsEditor() {
         }
         return;
     }
-    // Interactive menu mode.
+    // Interactive menu mode with native readline (no enquirer).
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const showMenu = () => {
-        clearScreen();
-        console.log(logo());
-        console.log('');
-        console.log(`  ${faint('#')} ${dim('settings file:')} ${dim(settingsFilePath())}`);
-        console.log('');
-        EDITABLE.forEach((field, i) => {
-            const current = raw[field.key];
-            const display = current === undefined || current === null ? '' : String(current);
-            const idx = String(i + 1).padStart(2, ' ');
-            console.log(`  ${red('[' + idx + ']')} ${bold(field.label.padEnd(18))} ${dim(field.hint.padEnd(24))} ${white(display === '' ? '(empty)' : display)}`);
-        });
-        console.log('');
-        console.log(`  ${red('[ 0]')} ${bold('save & exit'.padEnd(18))} ${dim('write changes to settings.json')}`);
-        console.log(`  ${red('[ h]')} ${bold('help'.padEnd(18))} ${dim('explain every setting')}`);
-        console.log(`  ${red('[ q]')} ${bold('quit'.padEnd(18))} ${dim('discard changes')}`);
-        console.log('');
-    };
-    let changed = false;
-    while (true) {
-        showMenu();
-        const choice = (await ask(rl, `  ${yellow('select (number, h, or q):')} `)).toLowerCase();
-        if (choice === 'q' || choice === 'quit' || choice === 'exit') {
-            console.log(`\n  ${dim('discarded. no changes written.')}`);
-            break;
-        }
-        if (choice === '0' || choice === 'save') {
-            if (changed) {
-                writeSettingsRaw(raw);
-                console.log(`\n  ${green('✓')} ${dim('settings saved to')} ${dim(settingsFilePath())}`);
-            }
-            else {
-                console.log(`\n  ${dim('no changes made.')}`);
-            }
-            break;
-        }
-        if (choice === 'h' || choice === 'help' || choice === '?') {
-            clearScreen();
+    try {
+        let changed = false;
+        let exiting = false;
+        while (!exiting) {
             console.log(logo());
             console.log('');
-            showHelp();
-            await ask(rl, `  ${dim('press Enter to return to the menu...')} `);
-            continue;
-        }
-        const num = Number.parseInt(choice, 10);
-        if (!Number.isFinite(num) || num < 1 || num > EDITABLE.length) {
-            console.log(`  ${red('✗')} invalid selection`);
-            await ask(rl, `  ${dim('press Enter to continue...')} `);
-            continue;
-        }
-        const field = EDITABLE[num - 1];
-        const current = raw[field.key];
-        const display = current === undefined || current === null ? '' : String(current);
-        console.log('');
-        console.log(`  ${red('●')} ${bold(field.label)}  ${dim(field.hint)}`);
-        console.log(`      ${dim(field.desc)}`);
-        console.log(`      ${dim('current:')} ${white(display === '' ? '(empty)' : display)}`);
-        const answer = await ask(rl, `      ${yellow('new value (Enter to keep):')} `);
-        if (answer === '') {
-            console.log(`      ${dim('kept.')}`);
-            await ask(rl, `  ${dim('press Enter to continue...')} `);
-            continue;
-        }
-        if (field.key === 'port' || field.key === 'sessionDays') {
-            const n = Number.parseInt(answer, 10);
-            if (!Number.isFinite(n) || n < 0) {
-                console.log(`      ${red('✗')} invalid number`);
+            console.log(`  ${bold('Select a setting to edit:')}`);
+            for (let i = 0; i < EDITABLE.length; i++) {
+                const field = EDITABLE[i];
+                const current = raw[field.key];
+                const display = current === undefined || current === null ? '' : String(current);
+                console.log(`  ${String(i + 1).padStart(2, ' ')}. ${field.label} - ${field.hint}  ${dim('[' + (display === '' ? '(empty)' : display) + ']')}`);
+            }
+            console.log(`  0. Save & exit`);
+            console.log(`  h. Help`);
+            console.log(`  q. Quit`);
+            console.log('');
+            const answer = (await ask(rl, `  ${bold('Choice: ')}`)).toLowerCase();
+            if (answer === 'q' || answer === 'quit') {
+                console.log(`\n  ${dim('discarded. no changes written.')}`);
+                exiting = true;
+                break;
+            }
+            if (answer === 'h' || answer === 'help') {
+                clearScreen();
+                console.log(logo());
+                console.log('');
+                showHelp();
+                continue;
+            }
+            if (answer === '0') {
+                if (changed) {
+                    writeSettingsRaw(raw);
+                    console.log(`\n  ${green('✓')} ${dim('settings saved to')} ${dim(settingsFilePath())}`);
+                }
+                else {
+                    console.log(`\n  ${dim('no changes made.')}`);
+                }
+                exiting = true;
+                break;
+            }
+            const index = Number.parseInt(answer, 10) - 1;
+            if (!Number.isFinite(index) || index < 0 || index >= EDITABLE.length) {
+                console.log(`  ${red('✗')} invalid selection`);
+                continue;
+            }
+            const field = EDITABLE[index];
+            const current = raw[field.key];
+            const display = current === undefined || current === null ? '' : String(current);
+            console.log('');
+            console.log(`  ${red('●')} ${bold(field.label)}  ${dim(field.hint)}`);
+            console.log(`      ${dim(field.desc)}`);
+            console.log(`      ${dim('current:')} ${white(display === '' ? '(empty)' : display)}`);
+            const value = await ask(rl, `      new value for ${field.label} (Enter to keep): `);
+            if (value === '') {
+                console.log(`      ${dim('kept.')}`);
             }
             else {
-                raw[field.key] = n;
-                changed = true;
-                console.log(`      ${red('✓')} updated`);
+                if (field.key === 'port' || field.key === 'sessionDays') {
+                    const n = Number.parseInt(value, 10);
+                    if (!Number.isFinite(n) || n < 0) {
+                        console.log(`      ${red('✗')} invalid number`);
+                    }
+                    else {
+                        raw[field.key] = n;
+                        changed = true;
+                        console.log(`      ${green('✓')} updated`);
+                    }
+                }
+                else if (field.key === 'allowRegistration') {
+                    if (value !== 'true' && value !== 'false') {
+                        console.log(`      ${red('✗')} expected true/false`);
+                    }
+                    else {
+                        raw[field.key] = value === 'true';
+                        changed = true;
+                        console.log(`      ${green('✓')} updated`);
+                    }
+                }
+                else {
+                    raw[field.key] = value;
+                    changed = true;
+                    console.log(`      ${green('✓')} updated`);
+                }
             }
         }
-        else if (field.key === 'allowRegistration') {
-            if (answer !== 'true' && answer !== 'false') {
-                console.log(`      ${red('✗')} expected true/false`);
-            }
-            else {
-                raw[field.key] = answer === 'true';
-                changed = true;
-                console.log(`      ${red('✓')} updated`);
-            }
-        }
-        else {
-            raw[field.key] = answer;
-            changed = true;
-            console.log(`      ${red('✓')} updated`);
-        }
-        await ask(rl, `  ${dim('press Enter to continue...')} `);
     }
-    rl.close();
+    finally {
+        rl.close();
+    }
 }
 //# sourceMappingURL=settings-cli.js.map

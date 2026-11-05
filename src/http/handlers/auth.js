@@ -7,13 +7,14 @@ import { auditFor } from '../audit.js';
 import { readJsonBody } from '../request.js';
 import { sendJson } from '../response.js';
 import { clearSessionCookie, sessionToken, setSessionCookie } from '../session.js';
+import { safeGet } from '../../util/safe.js';
 export async function handleRegister(req, res) {
     const settings = getSettings();
     if (!settings.allowRegistration) {
         throw new RepoError(403, 'Registration is disabled by the server settings (allowRegistration)');
     }
     const payload = await readJsonBody(req);
-    const user = await registerUser(payload.username, payload.password);
+    const user = await registerUser(safeGet(payload, 'username'), safeGet(payload, 'password'));
     const session = createSession(user);
     setSessionCookie(req, res, session.token, session.expiresAt);
     purgeExpiredSessions();
@@ -27,7 +28,7 @@ export async function handleRegister(req, res) {
 }
 export async function handleLogin(req, res) {
     const payload = await readJsonBody(req);
-    const user = await authenticateUser(payload.username, payload.password);
+    const user = await authenticateUser(safeGet(payload, 'username'), safeGet(payload, 'password'));
     if (!user) {
         auditFor(req, 'auth.login', 401, { detail: 'invalid credentials' }, null);
         throw new RepoError(401, 'Invalid username or password');

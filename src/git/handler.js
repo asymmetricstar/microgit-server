@@ -6,9 +6,22 @@ import { findRepo } from '../repositories/store.js';
 import { isPushRequest, parseBasicAuth } from '../security/auth.js';
 import { handleGitRequest } from './backend.js';
 export function parseGitPath(pathname) {
-    const segments = pathname.split('/').slice(1);
-    if (segments.length < 2 || segments[0] === '' || segments[1] === '') {
-        throw new RepoError(404, 'Not found: use /<user>/<repository>.git');
+    // Handle URL format: http://<ip>/<user>/<repo>.git or https://<domain>/<user>/<repo>.git
+    let normalizedPathname = pathname;
+    if (normalizedPathname.startsWith('http://') || normalizedPathname.startsWith('https://')) {
+        try {
+            const url = new URL(normalizedPathname);
+            normalizedPathname = url.pathname;
+        }
+        catch {
+            // Fall through to default parsing
+        }
+    }
+    // Remove leading/trailing slashes and .git extension
+    normalizedPathname = normalizedPathname.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
+    const segments = normalizedPathname.split('/').filter(Boolean);
+    if (segments.length < 2) {
+        throw new RepoError(404, 'Not found: use /<user>/<repository>.git or <user>/<repository>');
     }
     const [rawOwner, rawNameSegment, ...restSegments] = segments;
     const rawName = rawNameSegment.toLowerCase().endsWith('.git')

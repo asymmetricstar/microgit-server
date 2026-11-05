@@ -7,6 +7,7 @@ import { auditFor } from '../audit.js';
 import { booleanField, originFor, readJsonBody, requiredField } from '../request.js';
 import { sendJson } from '../response.js';
 import { currentUser, requireUser } from '../session.js';
+import { safeString } from '../../util/safe.js';
 export async function repoPayload(repo, baseUrl) {
     return {
         owner: repo.owner,
@@ -45,7 +46,7 @@ export async function handleDelete(req, res, ownerValue, nameValue) {
     const payload = hasBody ? await readJsonBody(req) : {};
     const user = currentUser(req);
     const name = nameValue ?? requiredField(payload, 'name');
-    const ownerValueOrUser = ownerValue ?? (typeof payload.owner === 'string' ? payload.owner : user?.username);
+    const ownerValueOrUser = ownerValue ?? safeString(payload['owner'], user?.username ?? '');
     if (isBlank(ownerValueOrUser)) {
         throw new RepoError(401, 'Sign in first: POST /api/login or send Authorization: Bearer <token>');
     }
