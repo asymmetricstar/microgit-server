@@ -19,8 +19,17 @@ export async function deleteRepo(input) {
     if (!input.actor.isAdmin && repo.ownerId !== input.actor.userId) {
         throw new RepoError(403, 'Only the owner or an administrator can delete this repository');
     }
+    const hashPattern = /^[0-9a-f]{64}$/i;
+    if (!hashPattern.test(repo.hash)) {
+        throw new RepoError(400, `Repository hash is invalid: ${repo.hash}`);
+    }
+    const target = path.resolve(config.reposRoot, repo.hash);
+    const root = path.resolve(config.reposRoot);
+    if (target !== root && !target.startsWith(`${root}${path.sep}`)) {
+        throw new RepoError(400, 'Invalid repository path');
+    }
     try {
-        await fs.rm(path.join(config.reposRoot, repo.hash), { recursive: true, force: true });
+        await fs.rm(target, { recursive: true, force: true });
     }
     catch (error) {
         throw new RepoError(500, `Failed to remove repository: ${error.message}`);

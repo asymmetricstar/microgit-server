@@ -20,13 +20,24 @@ function open(file) {
     try {
         db = new DatabaseSync(file);
     }
-    catch {
-        // A corrupt or unreadable database file is replaced with a fresh one so
-        // the server can boot; the schema is recreated below.
+    catch (error) {
+        // Never delete an unreadable database: park it (together with its WAL/SHM
+        // sidecars) under a `.corrupt-<timestamp>` name so the data stays
+        // recoverable, then start fresh. Silently dropping the file would destroy
+        // every account or the whole repository catalogue.
+        const parked = `${file}.corrupt-${new Date().toISOString().replace(/[^0-9A-Za-z]/g, '_')}`;
         try {
-            fs.rmSync(file, { force: true });
+            for (const suffix of ['', '-wal', '-shm']) {
+                if (fs.existsSync(file + suffix))
+                    fs.renameSync(file + suffix, parked + suffix);
+            }
         }
-        catch { /* ignore */ }
+        catch (renameError) {
+            throw new Error(`Cannot open ${file}: ${error.message}; ` +
+                `cannot park the file aside either: ${renameError.message}`);
+        }
+        console.error(`[git-server] cannot open ${file}: ${error.message}`);
+        console.error(`[git-server] the file was parked at ${parked}; continuing with a fresh database`);
         db = new DatabaseSync(file);
     }
     // WAL keeps readers running while a write commits; busy_timeout makes two
@@ -36,6 +47,13 @@ function open(file) {
     db.exec('PRAGMA foreign_keys = ON');
     db.exec('PRAGMA busy_timeout = 5000');
     return db;
+}
+/**
+ * Safe, unique backup name for a legacy table: parked instead of dropped so a
+ * schema migration never destroys data.
+ */
+function legacyTableName(table) {
+    return `${table}_legacy_${new Date().toISOString().replace(/[^0-9A-Za-z]/g, '_')}`;
 }
 /** Column names of one table, or an empty list when it does not exist. */
 function columnsOf(db, table) {
@@ -49,7 +67,9 @@ export function usersDb() {
         // a user and have no branch in their identity.
         const auditColumns = columnsOf(usersDatabase, 'audit');
         if (auditColumns.length > 0 && !auditColumns.includes('repo')) {
-            usersDatabase.exec('DROP TABLE audit');
+            // Park the legacy table instead of dropping evidence; the CREATE TABLE
+            // below builds the current schema next to it.
+            usersDatabase.exec(`ALTER TABLE audit RENAME TO ${legacyTableName('audit')}`);
         }
         usersDatabase.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -94,8 +114,13 @@ export function repoDb() {
         // rebuilt; nothing is lost because those rows are not addressable anymore.
         const repoColumns = columnsOf(repoDatabase, 'repos');
         if (repoColumns.length > 0 && !repoColumns.includes('owner')) {
-            repoDatabase.exec('DROP TABLE IF EXISTS repo_credentials');
-            repoDatabase.exec('DROP TABLE repos');
+            // Park the legacy catalogue instead of dropping it: the CREATE TABLE below
+            // builds the current schema next to it, and the old rows stay recoverable.
+            // (Dropping repos would orphan every on-disk repository directory.)
+            if (columnsOf(repoDatabase, 'repo_credentials').length > 0) {
+                repoDatabase.exec(`ALTER TABLE repo_credentials RENAME TO ${legacyTableName('repo_credentials')}`);
+            }
+            repoDatabase.exec(`ALTER TABLE repos RENAME TO ${legacyTableName('repos')}`);
         }
         else if (repoColumns.includes('delete_key_hash')) {
             // Delete keys existed only for the anonymous repositories of the old

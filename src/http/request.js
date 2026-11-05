@@ -40,14 +40,37 @@ export function decodePathname(raw) {
     if (decoded.includes('\0') || decoded.includes('\\')) {
         throw new RepoError(400, 'Illegal character in path');
     }
+    if (!decoded.startsWith('/')) {
+        throw new RepoError(400, 'Path must start with a slash');
+    }
     const segments = decoded.split('/').slice(1);
-    if (segments.some((segment) => segment === '..' || segment === '.')) {
+    if (segments.some(isTraversalSegment)) {
         throw new RepoError(400, 'Path traversal is not allowed');
     }
     return decoded;
 }
+/**
+ * True for a path segment that may resolve to `.` or `..`.
+ *
+ * Win32 trims trailing dots and spaces from every path component, so `.. ` is
+ * the parent directory and a segment made only of dots or spaces collapses;
+ * comparing the raw segment alone would let such a request escape the root
+ * (git's own `daemon_avoid_alias` check does not catch this either).
+ */
+function isTraversalSegment(segment) {
+    const folded = segment.replace(/[. ]+$/, '');
+    if (folded === '')
+        return segment !== '';
+    return folded === '.' || folded === '..';
+}
 /** Read and parse a bounded JSON object body. */
 export async function readJsonBody(req) {
+    // Refuse a declared size before reading a byte; Node discards the rest of
+    // the request once the error response is written.
+    const declared = Number(req.headers['content-length']);
+    if (Number.isFinite(declared) && declared > MAX_API_BODY) {
+        throw new RepoError(413, 'Request body too large');
+    }
     const chunks = [];
     let size = 0;
     for await (const chunk of req) {

@@ -19,8 +19,9 @@ export function createServer() {
     const server = http.createServer(createApp());
     server.keepAliveTimeout = 60_000;
     server.headersTimeout = 65_000;
-    // Large pushes take longer than Node's default 5 minute request timeout.
-    server.requestTimeout = 0;
+    // A slow or stalled client must not hold a socket (and its buffer) forever:
+    // 15 minutes comfortably covers large pushes while still bounding the wait.
+    server.requestTimeout = 15 * 60_000;
     server.timeout = 0;
     return server;
 }

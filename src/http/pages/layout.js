@@ -19,7 +19,7 @@ export const LAYOUT_CSS = `
 .brand-version{font-size:12px;color:var(--text-secondary);white-space:nowrap}
 .header-link{font-size:13px;color:var(--text-secondary);white-space:nowrap}
 .header-link:hover{color:var(--blue);text-decoration:none}
-.site-footer{margin-top:72px;border-top:1px solid var(--border)}
+.site-footer{margin-top:72px;border-top:1px solid var(--border);position:fixed;bottom:0;width:100%;background:white}
 .footer-inner{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;justify-content:space-between;padding-top:24px;padding-bottom:32px;font-size:12px;color:var(--text-secondary)}
 .footer-side{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .footer-side a{color:inherit}

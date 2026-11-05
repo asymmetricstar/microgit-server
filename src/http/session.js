@@ -35,7 +35,8 @@ export function appendSetCookie(res, value) {
 }
 /** Hand the session to the browser as an HttpOnly cookie; no token to copy. */
 export function setSessionCookie(req, res, token, expiresAt) {
-    const maxAge = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+    const expiresAtMs = new Date(expiresAt).getTime();
+    const maxAge = Number.isFinite(expiresAtMs) ? Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000)) : 0;
     const parts = [
         `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
         'Path=/',

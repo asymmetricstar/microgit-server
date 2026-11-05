@@ -15,7 +15,10 @@ const run = promisify(execFile);
 // ---------------------------------------------------------------------------
 async function configureRepository(dir) {
     const settings = getSettings();
-    await run('git', ['-C', dir, 'config', 'http.receivepack', 'true']);
+    // `http.receivepack` stays unset on purpose: git then applies its own
+    // REMOTE_USER gate for receive-pack, so `http.receivepack true` must not be
+    // disabled from here — the handler already scopes pushes to the owner or an
+    // administrator.
     await run('git', ['-C', dir, 'config', 'http.uploadpack', 'true']);
     // Long hash directories plus deep object paths overflow MAX_PATH on Windows.
     await run('git', ['-C', dir, 'config', 'core.longpaths', 'true']);

@@ -140,7 +140,7 @@ export async function route(req, res) {
                 return;
             }
             if (isRead) {
-                await handleRepoInfo(res, base, owner, name);
+                await handleRepoInfo(req, res, base, owner, name);
                 return;
             }
             return methodNotAllowed(req, res, 'GET, HEAD, DELETE');

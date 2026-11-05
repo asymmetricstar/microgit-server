@@ -39,7 +39,7 @@ export function handleAsset(res, name, contentType) {
 /** The landing page for `/`: what the server is, how to clone, how to sign in. */
 export function handleRoot(res, base) {
     sendHtml(res, 200, landingPage(base, {
-        repositories: listRepos({ limit: 1 }).total,
+        repositories: listRepos({ limit: 1, viewer: null }).total,
         users: countUsers(),
         sessions: countSessions(),
     }));
@@ -49,7 +49,7 @@ export function handleHealth(res) {
         status: 'ok',
         version: SERVER_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
-        repositories: listRepos({ limit: 1 }).total,
+        repositories: listRepos({ limit: 1, viewer: null }).total,
     });
 }
 export function handleMetrics(res) {

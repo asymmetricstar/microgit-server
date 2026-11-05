@@ -2,76 +2,53 @@ import { getSettings } from '../../config/settings.js';
 import { SERVER_VERSION } from '../../config/version.js';
 import { escapeHtml } from './html.js';
 import { LAYOUT_CSS, siteFooter, siteHeader } from './layout.js';
-const STYLE = `:root{color-scheme:light;--bg:#ffffff;--bg-subtle:#f6f8fa;--border:#d0d7de;--text:#24292f;--text-secondary:#656d76;--text-black:#1f2328;--blue:#0969da;--blue-light:#ebf2ff;--green:#328845;--green-light:#d0f0c0}
+const STYLE = `:root{--bg:#f6f8fa;--bg-panel:#ffffff;--border:#d0d7de;--text:#24292f;--text-secondary:#57606a;--text-muted:#8c959d;--blue:#0969da;--blue-hover:#0550ae;--blue-bg:#e7f5ff;--green:#1a7f37;--green-bg:#dafbe1;--radius:8px}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}
-a:hover{color:var(--blue)}
-.wrap{width:100%;max-width:900px;margin:0 auto;padding:0 24px}
-.hero{display:flex;flex-direction:column;align-items:center;padding-top:80px;padding-bottom:16px;text-align:center}
-.hero-mark{position:relative;display:flex;align-items:center;justify-content:center;width:88px;height:88px;color:var(--blue)}
-.hero-mark::before{content:"";position:absolute;inset:-24px;border-radius:50%;background:radial-gradient(circle,var(--blue-light) 0%,rgba(235,242,255,0) 70%)}
-.hero-mark img{position:relative;width:62px;height:auto}
-.hero h1{margin:16px 0 0;font-size:clamp(28px,5vw,40px);line-height:1.15;letter-spacing:-.04em;font-weight:600;color:var(--text-black)}
-.hero h1 span{font-weight:400;color:var(--text-secondary)}
-.card-section{margin-top:32px}
-.card{border:1px solid var(--border);border-radius:10px;background:#fff;overflow:hidden}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 16px;background:var(--bg-subtle);border-bottom:1px solid var(--border);font-size:14px}
-.crumbs{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;color:var(--text-secondary)}
-.crumbs .crumb-strong{font-weight:500;color:var(--text-black)}
-.crumb-sep{color:var(--border)}
-.pill{flex:none;padding:1px 8px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:11px;color:var(--text-secondary)}
-.card-branch{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-secondary)}
-.branch{color:var(--text-black)}
-.branch-dot{color:var(--border)}
-.card-body{padding:24px}
-.readme{font-size:13px;line-height:1.75;color:var(--text)}
-.readme p{margin:0 0 10px}
-.readme .readme-h1{margin:0 0 10px;font-weight:600;color:var(--text-black)}
-.readme .readme-h2{margin:22px 0 8px;font-weight:600;color:var(--text-black)}
-.readme .comment{color:var(--green);font-size:13px;line-height:1.75}
-.readme code.inline{padding:1px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg-subtle);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--text-black)}
-.readme pre{margin:10px 0 0;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;background:var(--bg-subtle);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.7;color:var(--text-black);white-space:pre-wrap;word-break:break-word}
-.cmd{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;background:var(--bg-subtle);box-shadow:0 1px 2px rgba(31,35,40,.04);transition:border-color .15s ease,box-shadow .15s ease}
-.cmd:hover{border-color:var(--blue);box-shadow:0 2px 8px rgba(9,105,218,.10)}
-.cmd code{flex:1;min-width:0;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.7;color:var(--text-black);white-space:pre-wrap;word-break:break-word}
-.copy{flex:none;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-secondary);font-family:Inter,sans-serif;font-size:11px;line-height:1.6;cursor:pointer;transition:border-color .15s ease,color .15s ease,background .15s ease}
-.copy:hover{border-color:var(--blue);color:#fff;background:var(--blue)}
-.cmd + .cmd{margin-top:10px}
-.strip{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;margin-top:32px;padding:14px 18px;border:1px solid var(--border);border-radius:10px;background:var(--bg-subtle)}
-.kv{display:flex;flex-wrap:wrap;gap:14px 28px;margin:0}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;height:100%;display:block}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+.hero{padding:60px 0 40px;text-align:center}
+.hero-mark{display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:16px;color:var(--blue);margin-bottom:24px}
+.hero-mark img{width:100px;height:auto;pointer-events:none}
+.hero h1{font-size:clamp(28px,5vw,40px);font-weight:600;letter-spacing:-0.02em;color:var(--text-black);margin:0 0 8px}
+.hero h1 span{font-weight:500;color:var(--text-secondary)}
+.hero p{font-size:16px;color:var(--text-secondary);margin:0;max-width:640px;margin:0 auto}
+.section{margin:48px 0}
+.section + .section{border-top:1px solid var(--border);padding-top:48px}
+.section-title{font-size:18px;font-weight:600;color:var(--text-black);margin:0 0 12px}
+.section-desc{font-size:14px;color:var(--text-secondary);margin:0 0 20px}
+.command{background:#f6f8fa;border:1px solid var(--border);border-radius:6px;padding:12px 16px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--text-black);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+.strip{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:20px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius)}
+.kv{display:flex;flex-wrap:wrap;gap:24px;margin:0}
 .kv-item{display:flex;flex-direction:column;gap:2px}
-.kv-label{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-secondary)}
-.kv-value{font-size:12px;color:var(--text-black)}
-.strip-link{font-size:12px;color:var(--text-secondary)}
-@media (max-width:640px){.hero{padding-top:56px}.card-body{padding:18px}}`;
-const COPY_SCRIPT = `document.querySelectorAll('.copy').forEach(function (button) {
-  button.addEventListener('click', function () {
-    var text = button.getAttribute('data-copy') || '';
-    var reset = function () {
-      button.textContent = 'Copied';
-      setTimeout(function () { button.textContent = 'Copy'; }, 1400);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(reset, reset);
-      return;
-    }
-    var area = document.createElement('textarea');
-    area.value = text;
-    document.body.appendChild(area);
-    area.select();
-    try { document.execCommand('copy'); } catch (error) {}
-    document.body.removeChild(area);
-    reset();
-  });
-});`;
+.kv-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.kv-value{font-size:15px;font-weight:600;color:var(--text-black);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.strip-link{font-size:13px;color:var(--text-secondary)}
+@media (max-width:640px){.hero{padding:40px 0 32px}.strip{flex-direction:column;align-items:flex-start}}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:1px solid transparent;border-radius:6px;background:var(--blue);color:#fff;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;transition:background .15s}
+.btn-primary:hover{background:var(--blue-hover)}
+.btn-outline{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;transition:all .15s}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue)}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:20px}
+.steps{margin:0;padding:0;list-style:none}
+.steps li{margin-bottom:16px}
+.step-title{display:block;font-size:13px;font-weight:600;color:var(--blue);margin-bottom:6px}
+.step-code{background:#f6f8fa;border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--text-black);white-space:pre-wrap;word-break:break-all;line-height:1.5}
+.tok-c{color:var(--green)}
+.tok-k{color:var(--blue);font-weight:600}
+.tok-f{color:#6f42c1}
+.tok-a{color:#d73a49}
+.tok-s{color:#032f62;background:rgba(27,31,35,.05);padding:0 2px;border-radius:3px}
+.tok-n{color:#005cc5}
+.tok-v{color:#24292f}`;
+const COPY_SCRIPT = '';
 /** The landing page for `/`: what the server is, how to clone, how to sign in. */
 export function landingPage(base, stats) {
     const { brand, tagline, sessionDays } = getSettings();
     const cloneCommand = `git clone ${base}/<user>/<repo>.git`;
-    const cliInstallCommand = `npm i -g microgit-cli`;
     return `<!doctype html>
-<html lang="en">
+<html lang="en" style="height: 100%;">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -83,84 +60,18 @@ export function landingPage(base, stats) {
 <style>${STYLE}${LAYOUT_CSS}</style>
 </head>
 <body>
-${siteHeader('wrap', '<a class="header-link" href="#quickstart">Quick start</a>')}
-<main class="wrap">
+${siteHeader('wrap', '<a class="header-link" href="https://github.com/asymmetricstar/microgit-server">Github</a>')}
+<main class="wrap" style="height: calc(100% - 200px);align-content: center;">
   <section class="hero">
     <div class="hero-mark"><img src="/logo.png" alt=""></div>
     <h1>${escapeHtml(brand)}${tagline === '' ? '' : `<span> — ${escapeHtml(tagline)}</span>`}</h1>
+    <p>A lightweight Git smart-HTTP server. Each repository belongs to an account, addressed as <code class="inline">owner/name.git</code>, and pushed using account credentials.</p>
   </section>
 
-  <section class="card-section" id="quickstart">
-    <div class="card">
-      <div class="card-head">
-        <div class="crumbs">
-          <span class="crumb-sep">/</span>
-          <span class="crumb-strong">${escapeHtml(brand)}</span>
-          <span class="crumb-sep">/</span>
-          <span>README.md</span>
-        </div>
-        <span class="pill mono">v${escapeHtml(SERVER_VERSION)}</span>
-      </div>
-      <div class="card-branch mono">
-        <span class="branch">main</span>
-        <span class="branch-dot">·</span>
-        <span>${stats.repositories} ${stats.repositories === 1 ? 'repository' : 'repositories'}</span>
-      </div>
-      <div class="card-body">
-        <div class="readme">
-          <p class="readme-h1"># ${escapeHtml(brand)}</p>
-          <p><strong>A lightweight Git smart-HTTP server.</strong> Each repository belongs to an account, is addressed as <code class="inline">owner/name.git</code>, and is pushed using that account's credentials. Sessions are stored server-side and expire after ${sessionDays} ${sessionDays === 1 ? 'day' : 'days'}.</p>
-          <p class="readme-h2">## Clone a repository</p>
-          <div class="cmd">
-            <code>${escapeHtml(cloneCommand)}</code>
-            <button class="copy" type="button" data-copy="${escapeHtml(cloneCommand)}">Copy</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="card-section">
-    <div class="card">
-      <div class="card-head">
-        <div class="crumbs">
-          <span class="crumb-sep">/</span>
-          <span class="crumb-strong">microgit-cli</span>
-          <span class="crumb-sep">/</span>
-          <span>install</span>
-        </div>
-        <span class="pill mono">npm</span>
-      </div>
-      <div class="card-body">
-        <div class="readme">
-          <p class="readme-h1"># Manage the server with microgit-cli</p>
-          <p>The <code class="inline">microgit</code> command is the companion CLI
-          for this server: it signs in, creates and deletes repositories, and wraps
-          the usual git commands so push and pull work with your account
-          credentials. Install it from npm:</p>
-          <div class="cmd">
-            <code>${escapeHtml(cliInstallCommand)}</code>
-            <button class="copy" type="button" data-copy="${escapeHtml(cliInstallCommand)}">Copy</button>
-          </div>
-          <p></p>
-          <p class="readme-h1"># Push your first repository</p>
-          <p class="comment"># 1. Register an account (non-interactive example).</p>
-          <p><code class="inline">microgit register --url http://127.0.0.1:80 --user abc --password 1234</code></p>
-          <p class="comment"># 2. Sign in (non-interactive example).</p>
-          <p><code class="inline">microgit login --url http://127.0.0.1:80 --user abc --password 1234</code></p>
-          <p class="comment"># 3. Create a repository and a local checkout with a first commit,</p>
-          <p class="comment">#    then push it.</p>
-          <p><code class="inline">microgit new app --init</code></p>
-          <p class="comment"># 4. Work as usual; commit also pushes.</p>
-          <p><code class="inline">cd app</code></p>
-          <p><code class="inline">echo "hello" &gt; hello.txt</code></p>
-          <p><code class="inline">microgit commit -m "Add hello.txt"</code></p>
-          <p class="comment"># 5. Check the session or list repositories.</p>
-          <p><code class="inline">microgit whoami</code></p>
-          <p><code class="inline">microgit list</code></p>
-        </div>
-      </div>
-    </div>
+  <section class="section">
+    <h2 class="section-title">Clone a repository</h2>
+    <p></p>
+    <div class="command">${escapeHtml(cloneCommand)}</div>
   </section>
 
   <section class="strip">
@@ -174,9 +85,6 @@ ${siteHeader('wrap', '<a class="header-link" href="#quickstart">Quick start</a>'
   </section>
 </main>
 ${siteFooter('wrap')}
-<script>
-${COPY_SCRIPT}
-</script>
 </body>
 </html>`;
 }

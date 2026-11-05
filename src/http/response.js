@@ -7,6 +7,7 @@ export function sendJson(res, status, payload) {
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': data.length,
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
     });
     res.end(data);
 }
@@ -16,6 +17,7 @@ export function sendHtml(res, status, html) {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Length': data.length,
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
     });
     res.end(data);
 }
@@ -25,6 +27,7 @@ export function sendText(res, status, body, contentType = 'text/plain; charset=u
         'Content-Type': contentType,
         'Content-Length': data.length,
         'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
     });
     res.end(data);
 }
@@ -33,6 +36,7 @@ export function sendBuffer(res, status, data, contentType) {
         'Content-Type': contentType,
         'Content-Length': data.length,
         'Cache-Control': 'public, max-age=3600',
+        'X-Content-Type-Options': 'nosniff',
     });
     res.end(data);
 }

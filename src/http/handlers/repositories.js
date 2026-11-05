@@ -67,12 +67,15 @@ export async function handleList(req, res, url) {
     const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
     const limit = Number.parseInt(url.searchParams.get('limit') ?? '50', 10);
     const privateParam = url.searchParams.get('private');
+    const user = currentUser(req);
     const result = listRepos({
         owner: url.searchParams.get('owner'),
         name: url.searchParams.get('name'),
         private: privateParam === null ? null : privateParam === 'true' || privateParam === '1',
         page: Number.isFinite(page) ? page : 1,
         limit: Number.isFinite(limit) ? limit : 50,
+        // Private repositories are only listed for their owner (or an admin).
+        viewer: user ? { userId: user.id, isAdmin: isAdminUser(user) } : null,
     });
     const base = originFor(req);
     sendJson(res, 200, {
@@ -83,9 +86,15 @@ export async function handleList(req, res, url) {
         repositories: await Promise.all(result.repositories.map((repo) => repoPayload(repo, base))),
     });
 }
-export async function handleRepoInfo(res, baseUrl, owner, name) {
+export async function handleRepoInfo(req, res, baseUrl, owner, name) {
     const repo = findRepo(owner, name);
-    if (!repo)
+    // A private repository the caller may not see must not even confirm its
+    // existence: answer with the same 404 as a missing repository.
+    const user = currentUser(req);
+    const canSee = repo !== null &&
+        (!repo.isPrivate ||
+            (user !== null && (isAdminUser(user) || user.username.toLowerCase() === repo.owner.toLowerCase())));
+    if (!canSee || !repo)
         throw new RepoError(404, `Repository '${owner}/${name}' not found`);
     sendJson(res, 200, await repoPayload(repo, baseUrl));
 }

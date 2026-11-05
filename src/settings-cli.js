@@ -122,7 +122,9 @@ export async function runSettingsEditor() {
             for (let i = 0; i < EDITABLE.length; i++) {
                 const field = EDITABLE[i];
                 const current = raw[field.key];
-                const display = current === undefined || current === null ? '' : String(current);
+                const rawDisplay = current === undefined || current === null ? '' : String(current);
+                // Keep one line: strip line breaks and collapse whitespace.
+                const display = rawDisplay.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
                 console.log(`  ${String(i + 1).padStart(2, ' ')}. ${field.label} - ${field.hint}  ${dim('[' + (display === '' ? '(empty)' : display) + ']')}`);
             }
             console.log(`  0. Save & exit`);

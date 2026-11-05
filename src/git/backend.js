@@ -1,14 +1,38 @@
 import { spawn } from 'node:child_process';
+import { RepoError } from '../config/errors.js';
 import { config } from '../config/config.js';
+import { getSettings } from '../config/settings.js';
 import { SERVER_VERSION } from '../config/version.js';
 const SERVER_SOFTWARE = `git-server/${SERVER_VERSION}`;
-/** Read the whole request body; git clients send either fixed length or chunked bodies. */
+/** Fallback ceiling when `maxPushBytes` is disabled (0): 512 MiB per request. */
+const DEFAULT_BODY_LIMIT = 512 * 1024 * 1024;
+/** Hard ceiling for a single git request body, shared by every endpoint. */
+function gitBodyLimit() {
+    const { maxPushBytes } = getSettings();
+    return maxPushBytes > 0 ? maxPushBytes : DEFAULT_BODY_LIMIT;
+}
+/**
+ * Read the whole request body; git clients send either fixed length or chunked
+ * bodies. Refuses anything larger than `gitBodyLimit()` so an unauthenticated
+ * `git-upload-pack` POST cannot exhaust memory.
+ */
 async function readBody(req) {
     if (req.method === 'GET' || req.method === 'HEAD')
         return Buffer.alloc(0);
+    const limit = gitBodyLimit();
+    const declared = Number(req.headers['content-length']);
+    if (Number.isFinite(declared) && declared > limit) {
+        throw new RepoError(413, 'Request body too large');
+    }
     const chunks = [];
+    let size = 0;
     for await (const chunk of req) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+        size += buf.length;
+        if (size > limit) {
+            throw new RepoError(413, 'Request body too large');
+        }
+        chunks.push(buf);
     }
     return Buffer.concat(chunks);
 }
@@ -99,9 +123,12 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
         windowsHide: true,
     });
     let stderr = '';
+    // Clamp what we keep in memory and echo to the log: a failing git can write
+    // megabytes, and the tail is what carries the actual error message.
+    const STDERR_MAX_CHARS = 16_000;
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk) => {
-        stderr += chunk;
+        stderr = (stderr + chunk).slice(-STDERR_MAX_CHARS);
         process.stderr.write(`[git http-backend] ${chunk}`);
     });
     let headerBuffer = Buffer.alloc(0);
@@ -119,8 +146,19 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
     child.stdout.on('data', (chunk) => {
         if (res.destroyed)
             return;
+        // Backpressure: when the client cannot keep up, pause git's stdout until
+        // the socket drains instead of letting Node's write queue grow unbounded.
+        const write = (data) => {
+            if (!res.write(data)) {
+                child.stdout.pause();
+                res.once('drain', () => {
+                    if (!res.destroyed)
+                        child.stdout.resume();
+                });
+            }
+        };
         if (headersSent) {
-            res.write(chunk);
+            write(chunk);
             return;
         }
         headerBuffer = Buffer.concat([headerBuffer, chunk]);
@@ -133,7 +171,7 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
         headersSent = true;
         res.writeHead(status, headers);
         if (rest.length > 0)
-            res.write(rest);
+            write(rest);
     });
     child.on('error', (error) => {
         fail(500, `Failed to start git http-backend: ${error.message}`);

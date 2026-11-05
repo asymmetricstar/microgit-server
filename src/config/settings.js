@@ -86,12 +86,25 @@ export function getSettings() {
     }
     if (cache && cache.mtimeMs === stat.mtimeMs)
         return cache.settings;
-    const text = fs.readFileSync(SETTINGS_FILE, 'utf8');
+    let text;
+    try {
+        text = fs.readFileSync(SETTINGS_FILE, 'utf8');
+    }
+    catch (error) {
+        // An unreadable file keeps the last known-good settings as well.
+        if (cache)
+            return cache.settings;
+        throw new Error(`Cannot read settings file '${SETTINGS_FILE}': ${error.message}`);
+    }
     let parsed;
     try {
         parsed = JSON.parse(text);
     }
     catch (error) {
+        // Corrupt settings must not take the whole server down: keep serving the
+        // last known-good values until the file is repaired.
+        if (cache)
+            return cache.settings;
         throw new Error(`settings file '${SETTINGS_FILE}' is not valid JSON: ${error.message}`);
     }
     const settings = normalize(parsed);

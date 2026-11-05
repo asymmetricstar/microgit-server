@@ -13,6 +13,11 @@ import { escapeHtml } from './html.js';
 const SAFE_LINK = /^(https?:\/\/|mailto:|#|\/)/i;
 /** Placeholder wrapper for inline code, replaced at the end of the line. */
 const CODE_TOKEN = '\u0000';
+/** Blockquote nesting ceiling; deeper content is rendered as plain text. */
+const MAX_QUOTE_DEPTH = 20;
+/** Single-character classes reused by the linear line scanners below. */
+const WS_CHAR = /\s/;
+const LANG_CHAR = /[\w+-]/;
 function link(href, label) {
     if (!SAFE_LINK.test(href))
         return label;
@@ -67,6 +72,26 @@ function inline(text, ctx) {
 function isRule(line) {
     return /^ {0,3}([-*_])( *\1){2,} *$/.test(line);
 }
+/**
+ * Parse the tail of a fence opener: `<spaces><language><spaces>`.
+ * Returns the language tag (empty when none) or `null` when anything else
+ * trails the markers, in which case the line is not a fence at all. The scan
+ * is strictly linear — no backtracking — so a 200k-character line cannot
+ * stall the event loop.
+ */
+function fenceLanguage(tail) {
+    let i = 0;
+    while (i < tail.length && WS_CHAR.test(tail[i]))
+        i += 1;
+    const start = i;
+    while (i < tail.length && LANG_CHAR.test(tail[i]))
+        i += 1;
+    while (i < tail.length && WS_CHAR.test(tail[i]))
+        i += 1;
+    if (i !== tail.length)
+        return null;
+    return tail.slice(start, i);
+}
 function splitCells(row) {
     let value = row.trim();
     if (value.startsWith('|'))
@@ -111,32 +136,49 @@ export function renderMarkdown(source, ctx) {
     const paragraph = [];
     while (index < lines.length) {
         const line = lines[index];
-        // Fenced code block.
-        const fence = /^ {0,3}(```|~~~)\s*([\w+-]*)\s*$/.exec(line);
+        // Fenced code block. The tail after the markers is parsed with a linear
+        // scan: the previous `\s*([\w+-]*)\s*$` pattern backtracked quadratically
+        // on long whitespace runs (ReDoS) and could stall the whole event loop.
+        const fence = /^ {0,3}(```|~~~)(.*)$/.exec(line);
         if (fence) {
-            flushParagraph(paragraph);
-            const close = fence[1];
-            const body = [];
-            index += 1;
-            while (index < lines.length && !lines[index].trimStart().startsWith(close)) {
-                body.push(lines[index]);
+            const language = fenceLanguage(fence[2]);
+            if (language !== null) {
+                flushParagraph(paragraph);
+                const close = fence[1];
+                const body = [];
                 index += 1;
+                while (index < lines.length && !lines[index].trimStart().startsWith(close)) {
+                    body.push(lines[index]);
+                    index += 1;
+                }
+                index += 1; // the closing fence
+                const langAttr = language === '' ? '' : ` class="language-${escapeHtml(language)}"`;
+                html.push(`<pre><code${langAttr}>${escapeHtml(body.join('\n'))}</code></pre>`);
+                continue;
             }
-            index += 1; // the closing fence
-            const language = fence[2] ? ` class="language-${escapeHtml(fence[2])}"` : '';
-            html.push(`<pre><code${language}>${escapeHtml(body.join('\n'))}</code></pre>`);
-            continue;
+            // Not a valid opener (trailing garbage): fall through as plain text.
         }
         if (line.trim() === '') {
             flushParagraph(paragraph);
             index += 1;
             continue;
         }
-        const heading = /^ {0,3}(#{1,6})\s+(.*?)\s*#*$/.exec(line);
-        if (heading) {
+        // Heading. The tail after `#`s is scanned manually: the old
+        // `#{1,6}\s+(.*?)\s*#*$` pattern could backtrack quadratically on long
+        // runs of spaces (ReDoS).
+        const heading = /^ {0,3}(#{1,6})(.*)$/.exec(line);
+        if (heading && heading[2] !== '' && WS_CHAR.test(heading[2][0])) {
             flushParagraph(paragraph);
             const level = heading[1].length;
-            html.push(`<h${level}>${inline(heading[2], ctx)}</h${level}>`);
+            // The old lazy match dropped the longest trailing `ws*#*` suffix:
+            // consume the trailing `#` run first, then the whitespace before it.
+            const text = heading[2].replace(/^\s+/, '');
+            let end = text.length;
+            while (end > 0 && text[end - 1] === '#')
+                end -= 1;
+            while (end > 0 && WS_CHAR.test(text[end - 1]))
+                end -= 1;
+            html.push(`<h${level}>${inline(text.slice(0, end), ctx)}</h${level}>`);
             index += 1;
             continue;
         }
@@ -186,14 +228,23 @@ export function renderMarkdown(source, ctx) {
                 quoted.push(lines[index].replace(/^ {0,3}> ?/, ''));
                 index += 1;
             }
+            const depth = (ctx?.depth ?? 0) + 1;
             const callout = /^ {0,3}\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.exec(quoted[0] ?? '');
             if (callout) {
                 const kind = callout[1].toLowerCase();
                 quoted[0] = quoted[0].replace(/^ {0,3}\[![A-Z]+\]\s*/i, '');
-                html.push(`<blockquote class="callout callout-${kind}"><div class="callout-title">${callout[1]}</div>${renderMarkdown(quoted.join('\n'), ctx)}</blockquote>`);
+            }
+            // Past the nesting cap render the quoted lines as a plain paragraph:
+            // deep `> > > ...` chains must not grow the call stack without bound.
+            const inner = depth > MAX_QUOTE_DEPTH
+                ? quoted.map((quotedLine) => `<p>${inline(quotedLine, ctx)}</p>`).join('')
+                : renderMarkdown(quoted.join('\n'), { ...ctx, depth });
+            if (callout) {
+                const kind = callout[1].toLowerCase();
+                html.push(`<blockquote class="callout callout-${kind}"><div class="callout-title">${callout[1]}</div>${inner}</blockquote>`);
             }
             else {
-                html.push(`<blockquote>${renderMarkdown(quoted.join('\n'), ctx)}</blockquote>`);
+                html.push(`<blockquote>${inner}</blockquote>`);
             }
             continue;
         }

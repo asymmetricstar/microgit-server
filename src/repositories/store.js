@@ -59,6 +59,19 @@ export function listRepos(filter = {}) {
         where.push('is_private = ?');
         params.push(filter.private ? 1 : 0);
     }
+    if (filter.viewer !== undefined) {
+        const viewer = filter.viewer;
+        if (viewer === null) {
+            // Anonymous: private repositories do not exist for this caller.
+            where.push('is_private = 0');
+        }
+        else if (!viewer.isAdmin) {
+            // Signed in: public repositories plus the caller's own.
+            where.push('(is_private = 0 OR owner_id = ?)');
+            params.push(viewer.userId);
+        }
+        // Administrators see everything: no extra clause.
+    }
     const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
     const page = Math.max(filter.page ?? 1, 1);
