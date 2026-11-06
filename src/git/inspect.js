@@ -63,6 +63,20 @@ function parseTree(raw) {
     }
     return entries;
 }
+export async function readRecentCommits(repo, limit = 10) {
+    const raw = await gitText(repo, ['log', `-${limit}`, `--format=${COMMIT_FORMAT}`, 'HEAD']);
+    if (!raw)
+        return [];
+    const commits = [];
+    for (const line of raw.split('\n')) {
+        if (!line.trim())
+            continue;
+        const parsed = parseCommit(line);
+        if (parsed)
+            commits.push(parsed);
+    }
+    return commits;
+}
 async function directorySize(dir) {
     let entries;
     try {
@@ -111,7 +125,7 @@ export async function readOverview(repo, dir = '') {
     const head = await gitText(repo, ['rev-parse', '--verify', '--quiet', 'HEAD']);
     if (!head) {
         return dir === ''
-            ? { commits: 0, lastCommit: null, sizeBytes, dir: '', entries: [], readme: null }
+            ? { commits: 0, lastCommit: null, sizeBytes, dir: '', entries: [], readme: null, recentCommits: [] }
             : null;
     }
     const [countRaw, lastRaw, listing] = await Promise.all([
@@ -139,6 +153,7 @@ export async function readOverview(repo, dir = '') {
         }
     }
     const commits = Number.parseInt((countRaw ?? '').trim(), 10);
+    const recentCommits = await readRecentCommits(repo, 10);
     return {
         commits: Number.isFinite(commits) ? commits : 0,
         lastCommit: parseCommit(lastRaw),
@@ -146,6 +161,7 @@ export async function readOverview(repo, dir = '') {
         dir,
         entries,
         readme,
+        recentCommits,
     };
 }
 export async function readFile(repo, filePath) {
@@ -178,6 +194,78 @@ export async function readFile(repo, filePath) {
         binary: false,
         truncated,
         lines: text === '' ? 0 : text.split('\n').length,
+    };
+}
+export async function readCommitDiff(repo, sha = 'HEAD') {
+    const resolved = await gitText(repo, ['rev-parse', '--verify', '--quiet', `${sha}^{commit}`]);
+    if (!resolved)
+        return null;
+    const commitSha = resolved.trim();
+    const metaRaw = await gitText(repo, ['log', '-1', `--format=${COMMIT_FORMAT}`, commitSha]);
+    const parsed = parseCommit(metaRaw);
+    if (!parsed)
+        return null;
+    const diff = await gitText(repo, ['show', '--no-color', '--format=', commitSha]);
+    if (diff === null)
+        return null;
+    const files = [];
+    let current = null;
+    let oldLine = 0;
+    let newLine = 0;
+    for (const rawLine of diff.split('\n')) {
+        const line = rawLine.replace(/\r$/, '');
+        if (line.startsWith('diff --git ')) {
+            if (current)
+                files.push(current);
+            current = null;
+            continue;
+        }
+        if (line.startsWith('--- ')) {
+            continue;
+        }
+        if (line.startsWith('+++ ')) {
+            const path = line.slice(4).trim().replace(/^b\//, '');
+            const oldPath = path;
+            current = { path: path === '/dev/null' ? '' : path, oldPath, additions: 0, deletions: 0, lines: [] };
+            continue;
+        }
+        if (line.startsWith('@@')) {
+            const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+            if (match) {
+                oldLine = Number.parseInt(match[1], 10) - 1;
+                newLine = Number.parseInt(match[2], 10) - 1;
+            }
+            if (current)
+                current.lines.push({ kind: 'hunk', text: line });
+            continue;
+        }
+        if (!current)
+            continue;
+        if (line.startsWith('+')) {
+            newLine += 1;
+            current.additions += 1;
+            current.lines.push({ kind: 'add', text: line.slice(1), newLine });
+        }
+        else if (line.startsWith('-')) {
+            oldLine += 1;
+            current.deletions += 1;
+            current.lines.push({ kind: 'remove', text: line.slice(1), oldLine });
+        }
+        else if (line.startsWith(' ') || line === '') {
+            oldLine += 1;
+            newLine += 1;
+            current.lines.push({ kind: 'context', text: line.startsWith(' ') ? line.slice(1) : line, oldLine, newLine });
+        }
+    }
+    if (current && current.path !== '')
+        files.push(current);
+    const cleaned = files.filter((f) => f.path !== '' && f.path !== '/dev/null');
+    return {
+        sha: parsed.sha,
+        subject: parsed.subject,
+        author: parsed.author,
+        date: parsed.date,
+        files: cleaned,
     };
 }
 //# sourceMappingURL=inspect.js.map

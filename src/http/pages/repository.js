@@ -1,6 +1,5 @@
-import { getSettings } from '../../config/settings.js';
 import { escapeHtml } from './html.js';
-import { LAYOUT_CSS, siteFooter, siteHeader } from './layout.js';
+import { pageShell } from './layout.js';
 import { renderMarkdown } from './markdown.js';
 const FOLDER_PATH = 'M1.75 0A1.75 1.75 0 0 0 0 1.75v10.5C0 13.22.78 14 1.75 14h12.5A1.75 1.75 0 0 0 16 12.25v-8.5A1.75 1.75 0 0 0 14.25 2H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 0.25 5.55 0 5 0H1.75Z';
 export const ICONS = {
@@ -468,6 +467,54 @@ const STYLES = `
   .readme-empty .readme-box-body p { margin: 0; color: var(--text-secondary); }
   .readme-raw { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
+  /* Commit diff view (white theme, GitHub-style). */
+  .diff-box { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); margin-bottom: 24px; }
+  .diff-file-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--bg-subtle); border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--text-black);
+  }
+  .diff-file-stats { display: flex; gap: 8px; font-size: 12px; font-weight: 500; }
+  .diff-file-stats .add { color: var(--green); }
+  .diff-file-stats .del { color: var(--red); }
+  .diff-hunk { border-top: 1px solid var(--border); }
+  .diff-hunk-header {
+    padding: 6px 16px; background: var(--blue-light); color: var(--blue);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 500;
+  }
+  .diff-line {
+    display: flex; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px; line-height: 1.6; white-space: pre;
+  }
+  .diff-line .ln { min-width: 44px; padding: 0 8px; text-align: right; color: var(--text-secondary); user-select: none; background: var(--bg-subtle); border-right: 1px solid var(--border); flex-shrink: 0; }
+  .diff-line .sign { width: 18px; text-align: center; flex-shrink: 0; user-select: none; }
+  .diff-line .code { padding: 0 12px; flex: 1; min-width: 0; overflow-x: auto; white-space: pre; }
+  .diff-line.add { background: #f0fdf4; }
+  .diff-line.add .sign { color: var(--green); }
+  .diff-line.add .code { color: #166534; }
+  .diff-line.remove { background: #fff1f2; }
+  .diff-line.remove .sign { color: var(--red); }
+  .diff-line.remove .code { color: #991b1b; }
+  .diff-line.context .code { color: var(--text); }
+  .diff-line.hunk { background: var(--blue-light); }
+  .diff-empty { padding: 20px 16px; font-size: 13px; color: var(--text-secondary); text-align: center; }
+  .commit-link { color: var(--blue); text-decoration: none; }
+  .commit-link:hover { text-decoration: underline; }
+
+  .commits-box { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); margin-bottom: 24px; }
+  .commits-box-header { padding: 10px 16px; background: var(--bg-subtle); border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text-black); }
+  .commit-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+    border-bottom: 1px solid #EAEEF2; font-size: 13px; text-decoration: none; color: var(--text);
+  }
+  .commit-row:last-child { border-bottom: 0; }
+  .commit-row:hover { background: var(--bg-subtle); text-decoration: none; }
+  .commit-row:hover .commit-row-msg { color: var(--blue); }
+  .commit-row .avatar { width: 20px; height: 20px; border-radius: 50%; background: #D0D7DE; flex-shrink: 0; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #656D76; }
+  .commit-row-msg { color: var(--text); font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .commit-row-meta { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+  .commit-row-sha { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+
   /* Code preview: header, toolbar, gutter, code, footer. */
   .preview-box { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); }
   .preview-box-header {
@@ -696,16 +743,17 @@ const STYLES = `
 function initial(name) {
     return name.trim().charAt(0).toUpperCase() || '?';
 }
-function commitRowHeader(commit) {
+function commitRowHeader(owner, name, commit) {
     if (!commit)
         return '<span class="commit-meta">No commits yet</span>';
+    const commitHref = `/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/commit/${encodeURIComponent(commit.sha)}`;
     return `<div class="commit-info">
       <div class="avatar">${escapeHtml(initial(commit.author))}</div>
-      <span class="commit-msg">${escapeHtml(commit.subject)}</span>
+      <a class="commit-link" href="${escapeHtml(commitHref)}"><span class="commit-msg">${escapeHtml(commit.subject)}</span></a>
       <span class="commit-meta">· ${escapeHtml(commit.author)} ·</span>
       <span class="commit-time">${escapeHtml(relativeTime(commit.date))}</span>
     </div>
-    <span class="commit-sha">${escapeHtml(commit.sha.slice(0, 7))}</span>`;
+    <a class="commit-sha commit-link" href="${escapeHtml(commitHref)}">${escapeHtml(commit.sha.slice(0, 7))}</a>`;
 }
 function fileRows(data) {
     const { overview } = data;
@@ -1112,25 +1160,31 @@ export function cloneControls(cloneUrl) {
 </script>`;
 }
 export function shell(title, body, headerRight) {
-    const { brand } = getSettings();
-    const right = headerRight !== undefined ? headerRight : '<a class="header-link" href="/#quickstart">Quick start</a>';
-    return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="/favicon.ico">
-<title>${escapeHtml(title)} · ${escapeHtml(brand)}</title>
-<style>${STYLES}${LAYOUT_CSS}</style>
-</head>
-<body>
-${siteHeader('page-wide', right)}
-<div class="lite-container">
-${body}
-</div>
-${siteFooter('page-wide')}
-</body>
-</html>`;
+    return pageShell(title, body, {
+        pageCss: STYLES,
+        headerRight: headerRight ?? '',
+        container: 'page-wide',
+    });
+}
+function commitsBox(data) {
+    const commits = data.overview.recentCommits;
+    if (commits.length === 0)
+        return '';
+    const rows = commits
+        .map((c) => {
+        const href = `/${encodeURIComponent(data.owner)}/${encodeURIComponent(data.name)}/commit/${encodeURIComponent(c.sha)}`;
+        return `<a class="commit-row" href="${escapeHtml(href)}">
+      <div class="avatar">${escapeHtml(initial(c.author))}</div>
+      <span class="commit-row-msg">${escapeHtml(c.subject)}</span>
+      <span class="commit-row-meta">${escapeHtml(c.author)} · ${escapeHtml(relativeTime(c.date))}</span>
+      <span class="commit-row-sha">${escapeHtml(c.sha.slice(0, 7))}</span>
+    </a>`;
+    })
+        .join('');
+    return `<div class="commits-box">
+    <div class="commits-box-header">Recent commits</div>
+    ${rows}
+  </div>`;
 }
 export function repositoryPage(data) {
     const label = `${data.owner}@${data.name}.git`;
@@ -1139,8 +1193,9 @@ export function repositoryPage(data) {
     const lastCommit = overview.lastCommit;
     const dir = overview.dir;
     const fileCount = overview.entries.length;
+    const commitsHref = repoUrl(data.owner, data.name) + 'commits';
     const stats = [
-        `<span class="stat">${ICONS.commits}<strong>${overview.commits}</strong> ${overview.commits === 1 ? 'commit' : 'commits'}</span>`,
+        `<a class="stat commit-link" href="${escapeHtml(commitsHref)}">${ICONS.commits}<strong>${overview.commits}</strong> ${overview.commits === 1 ? 'commit' : 'commits'}</a>`,
         `<span class="stat">${ICONS.size}<strong>${escapeHtml(formatSize(overview.sizeBytes))}</strong></span>`,
     ].join('');
     let list;
@@ -1153,13 +1208,13 @@ export function repositoryPage(data) {
     }
     else if (fileCount === 0) {
         list = `<div class="file-list-box">
-    <div class="file-list-header">${commitRowHeader(lastCommit)}</div>
+    <div class="file-list-header">${commitRowHeader(data.owner, data.name, lastCommit)}</div>
     <div class="empty-note">This directory is empty.</div>
   </div>`;
     }
     else {
         list = `<div class="file-list-box">
-    <div class="file-list-header">${commitRowHeader(lastCommit)}</div>
+    <div class="file-list-header">${commitRowHeader(data.owner, data.name, lastCommit)}</div>
     ${fileRows(data)}
   </div>`;
     }
@@ -1183,6 +1238,107 @@ ${file ? previewBox(data, file) : `${list}${readmeBox(data)}`}
 `;
     const headerRight = `<a class="header-link" href="${escapeHtml(repoUrl(data.owner, data.name))}">${escapeHtml(label)}</a>`;
     return shell(label, body, headerRight);
+}
+export function commitDiffPage(owner, name, diff, cloneUrl) {
+    const repoHome = repoUrl(owner, name);
+    const label = `${owner}@${name}.git`;
+    let body = `<div class="repo-title-row">
+  <a class="repo-title-left" href="${escapeHtml(repoHome)}">
+    <h1>${ICONS.repo}${escapeHtml(name)}</h1>
+    <span class="public-badge">Commit</span>
+  </a>
+</div>
+<div class="stats-line">
+  <span class="stat">${ICONS.commits}<strong>${escapeHtml(diff.sha.slice(0, 7))}</strong></span>
+</div>
+<div class="action-row">
+  <div class="file-count"><strong>${escapeHtml(diff.subject)}</strong> · ${escapeHtml(diff.author)} · ${escapeHtml(relativeTime(diff.date))}</div>
+  <div class="clone-row">${cloneControls(cloneUrl)}</div>
+</div>
+${breadcrumbBarForCommit(owner, name, diff.sha)}
+`;
+    if (diff.files.length === 0) {
+        body += `<div class="diff-box"><div class="diff-empty">No file changes in this commit.</div></div>`;
+    }
+    else {
+        body += diff.files.map((file) => {
+            const header = `<div class="diff-file-header">
+        <span>${escapeHtml(file.path)}</span>
+        <span class="diff-file-stats">
+          <span class="add">+${file.additions}</span>
+          <span class="del">-${file.deletions}</span>
+        </span>
+      </div>`;
+            const lines = file.lines.map((l) => {
+                if (l.kind === 'hunk') {
+                    return `<div class="diff-line hunk"><span class="ln"></span><span class="sign"></span><span class="code">${escapeHtml(l.text)}</span></div>`;
+                }
+                const sign = l.kind === 'add' ? '+' : l.kind === 'remove' ? '-' : ' ';
+                const lnOld = l.oldLine !== undefined ? l.oldLine : '';
+                const lnNew = l.newLine !== undefined ? l.newLine : '';
+                return `<div class="diff-line ${l.kind}"><span class="ln">${escapeHtml(String(lnOld))}</span><span class="sign">${sign}</span><span class="code">${escapeHtml(l.text)}</span></div>`;
+            }).join('');
+            return `<div class="diff-box">${header}<div>${lines}</div></div>`;
+        }).join('');
+    }
+    body += `<p style="margin-top:16px"><a href="${escapeHtml(repoHome)}">← Back to repository</a></p>`;
+    const headerRight = `<a class="header-link" href="${escapeHtml(repoHome)}">${escapeHtml(label)}</a>`;
+    return shell(`${diff.sha.slice(0, 7)} · ${diff.subject}`, body, headerRight);
+}
+function breadcrumbBarForCommit(owner, name, sha) {
+    const root = repoUrl(owner, name);
+    return `<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="${escapeHtml(root)}">${escapeHtml(owner)}</a>
+    <span class="sep">/</span>
+    <a href="${escapeHtml(root)}">${escapeHtml(name)}</a>
+    <span class="sep">/</span>
+    <span class="current" aria-current="page">commit ${escapeHtml(sha.slice(0, 7))}</span>
+  </nav>`;
+}
+export function commitsPage(owner, name, commits, cloneUrl) {
+    const repoHome = repoUrl(owner, name);
+    const label = `${owner}@${name}.git`;
+    let body = `<div class="repo-title-row">
+  <a class="repo-title-left" href="${escapeHtml(repoHome)}">
+    <h1>${ICONS.repo}${escapeHtml(name)}</h1>
+    <span class="public-badge">${commits.length} ${commits.length === 1 ? 'commit' : 'commits'}</span>
+  </a>
+</div>
+<div class="action-row">
+  <div class="file-count">${commits.length} ${commits.length === 1 ? 'commit' : 'commits'}</div>
+  <div class="clone-row">${cloneControls(cloneUrl)}</div>
+</div>
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="${escapeHtml(repoHome)}">${escapeHtml(owner)}</a>
+  <span class="sep">/</span>
+  <a href="${escapeHtml(repoHome)}">${escapeHtml(name)}</a>
+  <span class="sep">/</span>
+  <span class="current" aria-current="page">commits</span>
+</nav>
+`;
+    if (commits.length === 0) {
+        body += `<div class="commits-box"><div class="diff-empty">No commits yet.</div></div>`;
+    }
+    else {
+        const rows = commits
+            .map((c) => {
+            const href = `/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/commit/${encodeURIComponent(c.sha)}`;
+            return `<a class="commit-row" href="${escapeHtml(href)}">
+      <div class="avatar">${escapeHtml(initial(c.author))}</div>
+      <span class="commit-row-msg">${escapeHtml(c.subject)}</span>
+      <span class="commit-row-meta">${escapeHtml(c.author)} · ${escapeHtml(relativeTime(c.date))}</span>
+      <span class="commit-row-sha">${escapeHtml(c.sha.slice(0, 7))}</span>
+    </a>`;
+        })
+            .join('');
+        body += `<div class="commits-box">
+    <div class="commits-box-header">Commits</div>
+    ${rows}
+  </div>`;
+    }
+    body += `<p style="margin-top:16px"><a href="${escapeHtml(repoHome)}">← Back to repository</a></p>`;
+    const headerRight = `<a class="header-link" href="${escapeHtml(repoHome)}">${escapeHtml(label)}</a>`;
+    return shell(`Commits · ${name}`, body, headerRight);
 }
 export function errorPage(title, message) {
     const body = `<div class="repo-title-row">

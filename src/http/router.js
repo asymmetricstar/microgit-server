@@ -5,11 +5,12 @@ import { handleAudit } from './handlers/audit.js';
 import { handleMe } from './handlers/account.js';
 import { handleLogin, handleLogout, handleRegister } from './handlers/auth.js';
 import { handleAsset, handleHealth, handleMetrics, handleRoot } from './handlers/system.js';
+import { reposPage } from './pages/repos.js';
 import { handleDelete, handleList, handleNew, handleRepoInfo, } from './handlers/repositories.js';
 import { handleRepositoryPage, repoPageTarget } from './handlers/repository-page.js';
 import { handleUserAdmin, handleUsers } from './handlers/users.js';
 import { decodePathname, originFor } from './request.js';
-import { methodNotAllowed, sendJson } from './response.js';
+import { methodNotAllowed, sendHtml, sendJson } from './response.js';
 export async function route(req, res) {
     const rawUrl = req.url ?? '/';
     let url;
@@ -25,6 +26,10 @@ export async function route(req, res) {
     const isRead = method === 'GET' || method === 'HEAD';
     if (pathname === '/' && isRead) {
         handleRoot(res, base);
+        return;
+    }
+    if (pathname === '/repos' && isRead) {
+        sendHtml(res, 200, reposPage(base));
         return;
     }
     if (pathname === '/health' && isRead) {

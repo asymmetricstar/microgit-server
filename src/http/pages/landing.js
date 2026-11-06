@@ -1,10 +1,10 @@
 import { getSettings } from '../../config/settings.js';
 import { SERVER_VERSION } from '../../config/version.js';
 import { escapeHtml } from './html.js';
-import { LAYOUT_CSS, siteFooter, siteHeader } from './layout.js';
+import { pageShell } from './layout.js';
 const STYLE = `:root{--bg:#f6f8fa;--bg-panel:#ffffff;--border:#d0d7de;--text:#24292f;--text-secondary:#57606a;--text-muted:#8c959d;--blue:#0969da;--blue-hover:#0550ae;--blue-bg:#e7f5ff;--green:#1a7f37;--green-bg:#dafbe1;--radius:8px}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;height:100%;display:block}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--blue);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:960px;margin:0 auto;padding:0 20px}
@@ -42,25 +42,10 @@ a:hover{text-decoration:underline}
 .tok-s{color:#032f62;background:rgba(27,31,35,.05);padding:0 2px;border-radius:3px}
 .tok-n{color:#005cc5}
 .tok-v{color:#24292f}`;
-const COPY_SCRIPT = '';
 export function landingPage(base, stats) {
     const { brand, tagline, sessionDays } = getSettings();
     const cloneCommand = `git clone ${base}/<user>/<repo>.git`;
-    return `<!doctype html>
-<html lang="en" style="height: 100%;">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" href="/favicon.ico">
-<title>${escapeHtml(brand)} — Git Server</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<style>${STYLE}${LAYOUT_CSS}</style>
-</head>
-<body>
-${siteHeader('wrap', '<a class="header-link" href="https://github.com/asymmetricstar/microgit-server">Github</a>')}
-<main class="wrap" style="height: calc(100% - 200px);align-content: center;">
+    const body = `<main class="lite-container" style="height: calc(100% - 200px);align-content: center;">
   <section class="hero">
     <div class="hero-mark"><img src="/logo.png" alt=""></div>
     <h1>${escapeHtml(brand)}${tagline === '' ? '' : `<span> — ${escapeHtml(tagline)}</span>`}</h1>
@@ -82,9 +67,11 @@ ${siteHeader('wrap', '<a class="header-link" href="https://github.com/asymmetric
     </div>
     <a class="strip-link mono" href="${escapeHtml(`${base}/health`)}">/health →</a>
   </section>
-</main>
-${siteFooter('wrap')}
-</body>
-</html>`;
+</main>`;
+    return pageShell(`${brand} — Git Server`, body, {
+        pageCss: STYLE,
+        headerRight: '<a class="header-link" href="/repos">Repos</a><a class="header-link" href="https://github.com/asymmetricstar/microgit-server">Github</a>',
+        container: 'page-wide',
+    });
 }
 //# sourceMappingURL=landing.js.map

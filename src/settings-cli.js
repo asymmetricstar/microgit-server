@@ -123,7 +123,7 @@ export async function runSettingsEditor() {
                 const display = rawDisplay.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
                 console.log(`  ${String(i + 1).padStart(2, ' ')}. ${field.label} - ${field.hint}  ${dim('[' + (display === '' ? '(empty)' : display) + ']')}`);
             }
-            console.log(`  0. Save & exit`);
+            console.log(`  s. Save & exit`);
             console.log(`  h. Help`);
             console.log(`  q. Quit`);
             console.log('');
@@ -140,7 +140,7 @@ export async function runSettingsEditor() {
                 showHelp();
                 continue;
             }
-            if (answer === '0') {
+            if (answer === 's') {
                 if (changed) {
                     writeSettingsRaw(raw);
                     console.log(`\n  ${green('✓')} ${dim('settings saved to')} ${dim(settingsFilePath())}`);

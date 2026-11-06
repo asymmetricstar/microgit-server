@@ -1,6 +1,6 @@
 import { isAdminUser } from '../../accounts/users.js';
-import { readFile, readOverview, gitBuffer } from '../../git/inspect.js';
-import { errorPage, repositoryPage } from '../pages/repository.js';
+import { readFile, readCommitDiff, readOverview, readRecentCommits, gitBuffer } from '../../git/inspect.js';
+import { commitsPage, commitDiffPage, errorPage, repositoryPage } from '../pages/repository.js';
 import { cloneUrlFor, findRepo } from '../../repositories/store.js';
 import { sendHtml, sendText, sendBuffer } from '../response.js';
 import { currentUser } from '../session.js';
@@ -21,6 +21,14 @@ export function repoPageTarget(pathname) {
         return null;
     if (mode === undefined)
         return { owner, name, kind: 'root', path: '' };
+    if (mode === 'commit') {
+        if (rest.length !== 1 || !rest[0])
+            return null;
+        return { owner, name, kind: 'commit', path: rest[0] };
+    }
+    if (mode === 'commits') {
+        return { owner, name, kind: 'commits', path: '' };
+    }
     if (mode !== 'tree' && mode !== 'blob')
         return null;
     if (rest.length > MAX_PAGE_PATH_SEGMENTS)
@@ -36,6 +44,10 @@ function canonicalPath(target) {
     const base = `/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.name)}/`;
     if (target.kind === 'root')
         return base;
+    if (target.kind === 'commit')
+        return `${base}commit/${encodeURIComponent(target.path)}`;
+    if (target.kind === 'commits')
+        return `${base}commits`;
     const encodedPath = target.path.split('/').map(encodeURIComponent).join('/');
     return target.kind === 'tree' ? `${base}tree/${encodedPath}/` : `${base}blob/${encodedPath}`;
 }
@@ -132,6 +144,20 @@ export async function handleRepositoryPage(req, res, base, target) {
             raw: false,
             file,
         }));
+        return;
+    }
+    if (target.kind === 'commit') {
+        const diff = await readCommitDiff(repo, target.path);
+        if (!diff) {
+            notFound('Commit not found', `${target.owner}/${target.name} has no commit ${target.path}.`);
+            return;
+        }
+        sendHtml(res, 200, commitDiffPage(repo.owner, repo.name, diff, cloneUrlFor(repo, base)));
+        return;
+    }
+    if (target.kind === 'commits') {
+        const commits = await readRecentCommits(repo, 50);
+        sendHtml(res, 200, commitsPage(repo.owner, repo.name, commits, cloneUrlFor(repo, base)));
         return;
     }
     const overview = await readOverview(repo, target.kind === 'tree' ? target.path : '');
