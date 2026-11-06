@@ -1,4 +1,3 @@
-/** Version reported by `/`, `/health`, the `Server` header and the CLI banner. */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,16 +1,9 @@
-/**
- * Defensive helpers: safe property access, type coercion and path/injection
- * guards. Used at API boundaries so malformed or missing input never crashes
- * the server.
- */
-/** Safe nested property access. Returns `defaultValue` when any segment is missing. */
 export function safeGet(obj, key, defaultValue = undefined) {
     if (obj === null || obj === undefined)
         return defaultValue;
     const value = obj[key];
     return value === undefined || value === null ? defaultValue : value;
 }
-/** Coerce to string. null/undefined/non-string returns `defaultValue`. */
 export function safeString(value, defaultValue = '') {
     if (value === null || value === undefined)
         return defaultValue;
@@ -18,7 +11,6 @@ export function safeString(value, defaultValue = '') {
         return value;
     return defaultValue;
 }
-/** Coerce to number. Invalid returns `defaultValue`. */
 export function safeNumber(value, defaultValue = 0) {
     if (value === null || value === undefined)
         return defaultValue;
@@ -27,7 +19,6 @@ export function safeNumber(value, defaultValue = 0) {
     const parsed = Number.parseInt(String(value), 10);
     return Number.isFinite(parsed) ? parsed : defaultValue;
 }
-/** Coerce to boolean. Ambiguous values return `defaultValue`. */
 export function safeBoolean(value, defaultValue = false) {
     if (value === null || value === undefined)
         return defaultValue;
@@ -42,7 +33,6 @@ export function safeBoolean(value, defaultValue = false) {
     }
     return defaultValue;
 }
-/** Reject path traversal, null bytes and backslashes. */
 export function isSafePath(value) {
     if (!value || typeof value !== 'string')
         return false;
@@ -53,7 +43,6 @@ export function isSafePath(value) {
     const segments = value.split('/');
     return segments.every((seg) => seg !== '..' && seg !== '.');
 }
-/** Strip prototype-pollution keys from a plain object. */
 export function sanitizeObject(obj) {
     const clean = {};
     for (const [key, value] of Object.entries(obj)) {
@@ -63,7 +52,6 @@ export function sanitizeObject(obj) {
     }
     return clean;
 }
-/** Require a non-empty string; throw when missing. */
 export function requireNonEmpty(value, field) {
     const str = safeString(value);
     if (str.trim() === '') {

@@ -1,11 +1,6 @@
 import { getSettings } from '../../config/settings.js';
 import { SERVER_VERSION } from '../../config/version.js';
 import { escapeHtml } from './html.js';
-/**
- * The chrome shared by every HTML page: the sticky header with the logo from
- * `assets/logo.png` and the footer strip. Both pages append `LAYOUT_CSS`
- * directly after their own styles, so these rules win on equal specificity.
- */
 export const LAYOUT_CSS = `
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
 .page-wide{width:100%;max-width:1400px;margin:0 auto;padding:0 28px}
@@ -26,7 +21,6 @@ export const LAYOUT_CSS = `
 .footer-side a:hover{color:var(--blue);text-decoration:none}
 .footer-sep{color:var(--border)}
 @media (max-width:640px){.brand-tag,.divider,.header-link{display:none}}`;
-/** The standard header: brand block on the left, page-specific slot on the right. */
 export function siteHeader(container, right) {
     const { brand, tagline } = getSettings();
     return `<header class="site-header">
@@ -42,7 +36,6 @@ export function siteHeader(container, right) {
   </div>
 </header>`;
 }
-/** The standard footer: brand, tagline, year, version and the metrics link. */
 export function siteFooter(container) {
     const { brand, tagline } = getSettings();
     const year = new Date().getFullYear();

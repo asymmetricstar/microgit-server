@@ -4,18 +4,11 @@ import { config } from '../config/config.js';
 import { getSettings } from '../config/settings.js';
 import { SERVER_VERSION } from '../config/version.js';
 const SERVER_SOFTWARE = `git-server/${SERVER_VERSION}`;
-/** Fallback ceiling when `maxPushBytes` is disabled (0): 512 MiB per request. */
 const DEFAULT_BODY_LIMIT = 512 * 1024 * 1024;
-/** Hard ceiling for a single git request body, shared by every endpoint. */
 function gitBodyLimit() {
     const { maxPushBytes } = getSettings();
     return maxPushBytes > 0 ? maxPushBytes : DEFAULT_BODY_LIMIT;
 }
-/**
- * Read the whole request body; git clients send either fixed length or chunked
- * bodies. Refuses anything larger than `gitBodyLimit()` so an unauthenticated
- * `git-upload-pack` POST cannot exhaust memory.
- */
 async function readBody(req) {
     if (req.method === 'GET' || req.method === 'HEAD')
         return Buffer.alloc(0);
@@ -36,7 +29,6 @@ async function readBody(req) {
     }
     return Buffer.concat(chunks);
 }
-/** Find the blank line separating CGI headers from the body. */
 function indexOfHeaderEnd(buf) {
     const crlf = buf.indexOf('\r\n\r\n');
     const lf = buf.indexOf('\n\n');
@@ -67,7 +59,6 @@ function parseCgiHeaders(raw) {
 }
 function buildCgiEnv(req, pathInfo, queryString, body) {
     const env = { ...process.env };
-    // `PATH_TRANSLATED` must never win over `GIT_PROJECT_ROOT`/`PATH_INFO`.
     delete env.PATH_TRANSLATED;
     env.GATEWAY_INTERFACE = 'CGI/1.1';
     env.SERVER_SOFTWARE = SERVER_SOFTWARE;
@@ -76,7 +67,6 @@ function buildCgiEnv(req, pathInfo, queryString, body) {
     env.GIT_PROJECT_ROOT = config.reposRoot;
     env.PATH_INFO = pathInfo;
     env.QUERY_STRING = queryString;
-    // Skip the `git-daemon-export-ok` gate: repositories served here are exported.
     env.GIT_HTTP_EXPORT_ALL = '1';
     env.REMOTE_ADDR = req.socket.remoteAddress ?? '';
     env.REMOTE_PORT = String(req.socket.remotePort ?? 0);
@@ -87,8 +77,6 @@ function buildCgiEnv(req, pathInfo, queryString, body) {
         if (port)
             env.SERVER_PORT = port;
     }
-    // Standard CGI header mapping: `Git-Protocol` -> `HTTP_GIT_PROTOCOL`,
-    // `Content-Encoding` -> `HTTP_CONTENT_ENCODING`, and so on.
     for (const [name, value] of Object.entries(req.headers)) {
         if (value === undefined || name.startsWith(':'))
             continue;
@@ -99,22 +87,14 @@ function buildCgiEnv(req, pathInfo, queryString, body) {
     const contentType = req.headers['content-type'];
     if (contentType)
         env.CONTENT_TYPE = contentType;
-    // Buffering the body lets us always report an exact length, which also covers
-    // clients that use chunked transfer encoding.
     if (body.length > 0 || req.headers['content-length'] !== undefined) {
         env.CONTENT_LENGTH = String(body.length);
     }
     return env;
 }
-/**
- * Translate an HTTP request into a `git http-backend` CGI invocation and stream
- * its response back. Everything about the smart HTTP protocol (pkt-line,
- * packfiles, protocol v0/v1/v2) is handled by git itself.
- */
 export async function handleGitRequest(req, res, pathInfo, queryString, remoteUser) {
     const body = await readBody(req);
     const env = buildCgiEnv(req, pathInfo, queryString, body);
-    // `git http-backend` only allows receive-pack for an authenticated user.
     if (remoteUser)
         env.REMOTE_USER = remoteUser;
     const child = spawn('git', ['http-backend'], {
@@ -123,8 +103,6 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
         windowsHide: true,
     });
     let stderr = '';
-    // Clamp what we keep in memory and echo to the log: a failing git can write
-    // megabytes, and the tail is what carries the actual error message.
     const STDERR_MAX_CHARS = 16_000;
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk) => {
@@ -146,8 +124,6 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
     child.stdout.on('data', (chunk) => {
         if (res.destroyed)
             return;
-        // Backpressure: when the client cannot keep up, pause git's stdout until
-        // the socket drains instead of letting Node's write queue grow unbounded.
         const write = (data) => {
             if (!res.write(data)) {
                 child.stdout.pause();
@@ -186,9 +162,7 @@ export async function handleGitRequest(req, res, pathInfo, queryString, remoteUs
         }
         res.end();
     });
-    // A failed spawn emits `error`, not `close`, so only guard the normal path here.
     child.stdin.on('error', () => {
-        /* client or git closed the pipe early */
     });
     if (body.length > 0)
         child.stdin.end(body);

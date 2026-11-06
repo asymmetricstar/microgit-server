@@ -10,34 +10,18 @@ import { repoDb } from '../data/db.js';
 import { DEFAULT_BRANCH, locateRepo } from './naming.js';
 import { invalidateRepo, lookupRepo } from './store.js';
 const run = promisify(execFile);
-// ---------------------------------------------------------------------------
-// git configuration and templates
-// ---------------------------------------------------------------------------
 async function configureRepository(dir) {
     const settings = getSettings();
-    // `http.receivepack` stays unset on purpose: git then applies its own
-    // REMOTE_USER gate for receive-pack, so `http.receivepack true` must not be
-    // disabled from here — the handler already scopes pushes to the owner or an
-    // administrator.
     await run('git', ['-C', dir, 'config', 'http.uploadpack', 'true']);
-    // Long hash directories plus deep object paths overflow MAX_PATH on Windows.
     await run('git', ['-C', dir, 'config', 'core.longpaths', 'true']);
     if (settings.maxPushBytes > 0) {
         await run('git', ['-C', dir, 'config', 'receive.maxInputSize', String(settings.maxPushBytes)]);
     }
 }
-/** `git add` on an empty or fully ignored tree has nothing to commit. */
 function isNothingToCommit(error) {
     const message = error.stderr ?? '';
     return /nothing to commit|nothing added to commit/i.test(message);
 }
-/**
- * Fill a new repository from `settings.template`.
- *
- * A plain folder is committed as one `Initial commit` on `main`. A folder that
- * already is a git repository has its branches and tags copied over instead, so
- * the template can carry real history, hooks or submodule pointers.
- */
 async function applyTemplate(dest) {
     const template = getSettings().template;
     if (template === '')
@@ -95,7 +79,7 @@ async function applyTemplate(dest) {
             }
             catch (error) {
                 if (isNothingToCommit(error))
-                    return; // every template file is ignored
+                    return;
                 throw error;
             }
             await run('git', ['-C', work, 'push', '--quiet', dest, `HEAD:refs/heads/${DEFAULT_BRANCH}`]);
@@ -108,13 +92,6 @@ async function applyTemplate(dest) {
         console.error(`[git-server] template '${source}' was not applied: ${error.message}`);
     }
 }
-/**
- * Create one repository for an account.
- *
- * The folder is the hash of owner and name, so `mkdir` without `recursive` is
- * the cross-process lock: exactly one concurrent request can win it. The loser
- * re-reads the database and either returns the existing record or conflicts.
- */
 export async function createRepo(input) {
     const location = locateRepo(input.owner.username, input.name);
     const { owner, name, hash, relative, container, dir } = location;
@@ -130,7 +107,6 @@ export async function createRepo(input) {
     const containerDir = path.join(config.reposRoot, container);
     await fs.mkdir(config.reposRoot, { recursive: true });
     try {
-        // Atomic: no `recursive`, so a second creator fails with EEXIST.
         await fs.mkdir(containerDir);
     }
     catch (error) {

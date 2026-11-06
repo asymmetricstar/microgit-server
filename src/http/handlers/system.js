@@ -8,15 +8,12 @@ import { cacheStats } from '../../data/cache.js';
 import { listRepos } from '../../repositories/store.js';
 import { landingPage } from '../pages/landing.js';
 import { sendJson, sendHtml, sendText } from '../response.js';
-/** Resolve the `assets/` directory: prefer the package root (so an installed
- *  npm package finds its assets), fall back to the current working directory. */
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.resolve(moduleDir, '..', '..', '..');
 const assetsDir = fs.existsSync(path.join(packageRoot, 'assets'))
     ? path.join(packageRoot, 'assets')
     : path.resolve(process.cwd(), 'assets');
 const assetCache = new Map();
-/** Serve one of the root assets (favicon.ico, logo.png, etc.). */
 export function handleAsset(res, name, contentType) {
     let data = assetCache.get(name);
     if (!data) {
@@ -36,7 +33,6 @@ export function handleAsset(res, name, contentType) {
     });
     res.end(data);
 }
-/** The landing page for `/`: what the server is, how to clone, how to sign in. */
 export function handleRoot(res, base) {
     sendHtml(res, 200, landingPage(base, {
         repositories: listRepos({ limit: 1, viewer: null }).total,

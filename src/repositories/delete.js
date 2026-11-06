@@ -5,9 +5,6 @@ import { RepoError } from '../config/errors.js';
 import { repoDb } from '../data/db.js';
 import { normalizeOwner, slugify } from './naming.js';
 import { invalidateRepo, lookupRepo } from './store.js';
-/**
- * Remove one repository. Only the owner and administrators may do it.
- */
 export async function deleteRepo(input) {
     const owner = normalizeOwner(input.owner);
     const name = slugify(input.name, 'name');

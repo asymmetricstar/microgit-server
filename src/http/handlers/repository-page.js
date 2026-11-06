@@ -4,22 +4,8 @@ import { errorPage, repositoryPage } from '../pages/repository.js';
 import { cloneUrlFor, findRepo } from '../../repositories/store.js';
 import { sendHtml, sendText, sendBuffer } from '../response.js';
 import { currentUser } from '../session.js';
-/** Longest path the page routes accept, to keep git calls bounded. */
 const MAX_PAGE_PATH_LENGTH = 512;
 const MAX_PAGE_PATH_SEGMENTS = 32;
-/**
- * Match the rendered pages:
- *
- *   /<owner>/<repository>/            repository home
- *   /<owner>/<repository>.git         clone URL, redirected to the home page
- *   /<owner>/<repository>/tree/<dir>/ one directory
- *   /<owner>/<repository>/blob/<file> one file
- *
- * The bare `.git` address is what people paste into a browser, so it is turned
- * into the page URL. Requests below it (`<name>.git/info/refs`, packfile
- * endpoints, dumb protocol paths) are left to `git http-backend`; anything
- * deeper than these shapes is not a page either.
- */
 export function repoPageTarget(pathname) {
     const trailingSlash = pathname.endsWith('/');
     const segments = pathname.split('/').slice(1);
@@ -30,7 +16,6 @@ export function repoPageTarget(pathname) {
     const [owner, rawName, mode, ...rest] = segments;
     if (!owner || !rawName)
         return null;
-    // The clone URL ends in `.git`; the stored name never does.
     const name = rawName.toLowerCase().endsWith('.git') ? rawName.slice(0, -4) : rawName;
     if (!name)
         return null;
@@ -43,12 +28,10 @@ export function repoPageTarget(pathname) {
     const pagePath = rest.join('/');
     if (pagePath.length > MAX_PAGE_PATH_LENGTH)
         return null;
-    // `/owner/repo/tree/` is the repository home.
     if (pagePath === '')
         return mode === 'tree' ? { owner, name, kind: 'root', path: '' } : null;
     return { owner, name, kind: mode, path: pagePath };
 }
-/** Canonical URL for a page target, so bookmarks and links stay stable. */
 function canonicalPath(target) {
     const base = `/${encodeURIComponent(target.owner)}/${encodeURIComponent(target.name)}/`;
     if (target.kind === 'root')
@@ -60,10 +43,6 @@ function parentDir(filePath) {
     const index = filePath.lastIndexOf('/');
     return index === -1 ? '' : filePath.slice(0, index);
 }
-/**
- * Render the repository page. Everything on it is read from git on this
- * request: the directory listing, per-entry commits and the README text.
- */
 function contentTypeForPath(filePath) {
     const lower = filePath.toLowerCase();
     if (lower.endsWith('.png'))
@@ -100,7 +79,6 @@ export async function handleRepositoryPage(req, res, base, target) {
         repo = findRepo(target.owner, target.name);
     }
     catch {
-        // An invalid owner is a missing page, not an API validation error.
         notFound();
         return;
     }

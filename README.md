@@ -29,10 +29,6 @@ machine that talks to the server:
 
 ## Install
 ```bash
-npm install -g microgit-cli
-```
-## Push your first repository
-```sh
 # 1. Register an account (non-interactive example).
 microgit register --url http://127.0.0.1:80 --user abc --password 1234
 # 2. Sign in (non-interactive example).
@@ -44,7 +40,10 @@ microgit new app --init
 cd app
 echo "hello" > hello.txt
 microgit commit -m "Add hello.txt"
-# 5. Check the session or list repositories.
+# 5. The repository is now live at:
+#    http://127.0.0.1:80/abc/app.git
+#    (visit it, or clone it from anywhere with `microgit clone` / `git clone`).
+# 6. Check the session or list repositories.
 microgit whoami
 microgit list
 ```
@@ -187,5 +186,5 @@ Precedence for the public origin is `PUBLIC_URL` (environment) â†’ `publicUrl` â
 server after changing either one.
 
 
-## curl (manuel commit,push,pull) 
-Read to `manuel-git-usage.md`
+## manuel repo push curl+git (commit,push,pull) 
+Please Read to `manuel-git-usage.md`

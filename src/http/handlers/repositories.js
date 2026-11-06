@@ -74,7 +74,6 @@ export async function handleList(req, res, url) {
         private: privateParam === null ? null : privateParam === 'true' || privateParam === '1',
         page: Number.isFinite(page) ? page : 1,
         limit: Number.isFinite(limit) ? limit : 50,
-        // Private repositories are only listed for their owner (or an admin).
         viewer: user ? { userId: user.id, isAdmin: isAdminUser(user) } : null,
     });
     const base = originFor(req);
@@ -88,8 +87,6 @@ export async function handleList(req, res, url) {
 }
 export async function handleRepoInfo(req, res, baseUrl, owner, name) {
     const repo = findRepo(owner, name);
-    // A private repository the caller may not see must not even confirm its
-    // existence: answer with the same 404 as a missing repository.
     const user = currentUser(req);
     const canSee = repo !== null &&
         (!repo.isPrivate ||

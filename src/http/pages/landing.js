@@ -43,7 +43,6 @@ a:hover{text-decoration:underline}
 .tok-n{color:#005cc5}
 .tok-v{color:#24292f}`;
 const COPY_SCRIPT = '';
-/** The landing page for `/`: what the server is, how to clone, how to sign in. */
 export function landingPage(base, stats) {
     const { brand, tagline, sessionDays } = getSettings();
     const cloneCommand = `git clone ${base}/<user>/<repo>.git`;

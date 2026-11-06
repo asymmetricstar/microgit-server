@@ -24,7 +24,6 @@ function repoCacheKey(owner, name) {
 export function invalidateRepo(owner, name) {
     caches.repo.delete(repoCacheKey(owner, name));
 }
-/** Look a repository up by owner and name. Cached; misses included. */
 export function lookupRepo(owner, name) {
     const key = repoCacheKey(owner, name);
     const cached = caches.repo.get(key);
@@ -38,7 +37,6 @@ export function lookupRepo(owner, name) {
     caches.repo.set(key, record, getSettings().cacheTtlMs);
     return record;
 }
-/** Resolve raw request values, then look the repository up. */
 export function findRepo(rawOwner, rawName) {
     const owner = normalizeOwner(rawOwner);
     const name = slugify(rawName, 'name');
@@ -62,15 +60,12 @@ export function listRepos(filter = {}) {
     if (filter.viewer !== undefined) {
         const viewer = filter.viewer;
         if (viewer === null) {
-            // Anonymous: private repositories do not exist for this caller.
             where.push('is_private = 0');
         }
         else if (!viewer.isAdmin) {
-            // Signed in: public repositories plus the caller's own.
             where.push('(is_private = 0 OR owner_id = ?)');
             params.push(viewer.userId);
         }
-        // Administrators see everything: no extra clause.
     }
     const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
@@ -93,7 +88,6 @@ export function listRepos(filter = {}) {
         pages: Math.max(Math.ceil(total / limit), 1),
     };
 }
-/** Read the bare repository's HEAD without spawning git. */
 export async function readHead(repo) {
     try {
         const raw = (await fs.readFile(path.join(config.reposRoot, repo.path, 'HEAD'), 'utf8')).trim();
@@ -104,7 +98,6 @@ export async function readHead(repo) {
         return null;
     }
 }
-/** Prepare the data directories and both database schemas. */
 export async function ensureStorage() {
     await fs.mkdir(config.reposRoot, { recursive: true });
     await fs.mkdir(config.dataDir, { recursive: true });
@@ -115,10 +108,8 @@ export async function ensureStorage() {
         await fs.mkdir(templateDir, { recursive: true });
     }
     repoDb();
-    // Opening users.db here makes a broken schema fail at boot, not mid-request.
     usersDb();
 }
-/** Per-repository clone URL, honouring the configured public origin. */
 export function cloneUrlFor(repo, baseUrl) {
     const base = (config.publicUrl || baseUrl).replace(/\/+$/, '');
     return `${base}/${repo.owner}/${repo.name}.git`;

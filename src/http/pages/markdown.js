@@ -1,21 +1,7 @@
 import { escapeHtml } from './html.js';
-/**
- * A small, dependency free markdown renderer for README files.
- *
- * Everything is escaped first and only then turned into markup, so a repository
- * cannot inject HTML into the page: unsupported syntax stays visible as text
- * instead of being passed through. Supported: headings, paragraphs, fenced and
- * indented code blocks, bullet and ordered lists (with task list items), block
- * quotes (with GitHub-style callouts), horizontal rules, tables, inline code,
- * bold, italics, strikethrough, links and images.
- */
-/** Links that may be emitted as clickable; anything else is shown as text. */
 const SAFE_LINK = /^(https?:\/\/|mailto:|#|\/)/i;
-/** Placeholder wrapper for inline code, replaced at the end of the line. */
 const CODE_TOKEN = '\u0000';
-/** Blockquote nesting ceiling; deeper content is rendered as plain text. */
 const MAX_QUOTE_DEPTH = 20;
-/** Single-character classes reused by the linear line scanners below. */
 const WS_CHAR = /\s/;
 const LANG_CHAR = /[\w+-]/;
 function link(href, label) {
@@ -25,7 +11,6 @@ function link(href, label) {
     const rel = external ? ' target="_blank" rel="noopener noreferrer"' : '';
     return `<a href="${escapeHtml(href)}"${rel}>${label}</a>`;
 }
-/** Resolve a (possibly relative) image source against the repository context. */
 function resolveImageSrc(src, ctx) {
     if (/^(https?:|data:|\/|#)/i.test(src))
         return src;
@@ -48,14 +33,12 @@ function resolveImageSrc(src, ctx) {
     }
     return resolved.join('/');
 }
-/** Inline syntax: code spans, images, links, bold, italics and strikethrough. */
 function inline(text, ctx) {
     const codes = [];
     let out = escapeHtml(text).replace(/`([^`]+)`/g, (_match, code) => {
         codes.push(`<code class="inline">${code}</code>`);
         return `${CODE_TOKEN}${codes.length - 1}${CODE_TOKEN}`;
     });
-    // Images: ![alt](src "title") — must run before the link rule.
     out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_match, alt, src, title) => {
         const resolved = resolveImageSrc(src, ctx);
         const safeAlt = alt;
@@ -72,13 +55,6 @@ function inline(text, ctx) {
 function isRule(line) {
     return /^ {0,3}([-*_])( *\1){2,} *$/.test(line);
 }
-/**
- * Parse the tail of a fence opener: `<spaces><language><spaces>`.
- * Returns the language tag (empty when none) or `null` when anything else
- * trails the markers, in which case the line is not a fence at all. The scan
- * is strictly linear — no backtracking — so a 200k-character line cannot
- * stall the event loop.
- */
 function fenceLanguage(tail) {
     let i = 0;
     while (i < tail.length && WS_CHAR.test(tail[i]))
@@ -136,9 +112,6 @@ export function renderMarkdown(source, ctx) {
     const paragraph = [];
     while (index < lines.length) {
         const line = lines[index];
-        // Fenced code block. The tail after the markers is parsed with a linear
-        // scan: the previous `\s*([\w+-]*)\s*$` pattern backtracked quadratically
-        // on long whitespace runs (ReDoS) and could stall the whole event loop.
         const fence = /^ {0,3}(```|~~~)(.*)$/.exec(line);
         if (fence) {
             const language = fenceLanguage(fence[2]);
@@ -151,27 +124,21 @@ export function renderMarkdown(source, ctx) {
                     body.push(lines[index]);
                     index += 1;
                 }
-                index += 1; // the closing fence
+                index += 1;
                 const langAttr = language === '' ? '' : ` class="language-${escapeHtml(language)}"`;
                 html.push(`<pre><code${langAttr}>${escapeHtml(body.join('\n'))}</code></pre>`);
                 continue;
             }
-            // Not a valid opener (trailing garbage): fall through as plain text.
         }
         if (line.trim() === '') {
             flushParagraph(paragraph);
             index += 1;
             continue;
         }
-        // Heading. The tail after `#`s is scanned manually: the old
-        // `#{1,6}\s+(.*?)\s*#*$` pattern could backtrack quadratically on long
-        // runs of spaces (ReDoS).
         const heading = /^ {0,3}(#{1,6})(.*)$/.exec(line);
         if (heading && heading[2] !== '' && WS_CHAR.test(heading[2][0])) {
             flushParagraph(paragraph);
             const level = heading[1].length;
-            // The old lazy match dropped the longest trailing `ws*#*` suffix:
-            // consume the trailing `#` run first, then the whitespace before it.
             const text = heading[2].replace(/^\s+/, '');
             let end = text.length;
             while (end > 0 && text[end - 1] === '#')
@@ -188,7 +155,6 @@ export function renderMarkdown(source, ctx) {
             index += 1;
             continue;
         }
-        // Table (GitHub-flavored).
         if (index + 1 < lines.length &&
             line.trim().includes('|') &&
             isTableSeparator(lines[index + 1])) {
@@ -234,8 +200,6 @@ export function renderMarkdown(source, ctx) {
                 const kind = callout[1].toLowerCase();
                 quoted[0] = quoted[0].replace(/^ {0,3}\[![A-Z]+\]\s*/i, '');
             }
-            // Past the nesting cap render the quoted lines as a plain paragraph:
-            // deep `> > > ...` chains must not grow the call stack without bound.
             const inner = depth > MAX_QUOTE_DEPTH
                 ? quoted.map((quotedLine) => `<p>${inline(quotedLine, ctx)}</p>`).join('')
                 : renderMarkdown(quoted.join('\n'), { ...ctx, depth });
@@ -248,7 +212,6 @@ export function renderMarkdown(source, ctx) {
             }
             continue;
         }
-        // Lists: consecutive items of the same kind become one list.
         const bullet = /^ {0,3}[-*+]\s+(.*)$/.exec(line);
         const ordered = /^ {0,3}\d+[.)]\s+(.*)$/.exec(line);
         if (bullet || ordered) {
@@ -274,7 +237,6 @@ export function renderMarkdown(source, ctx) {
             html.push(`<${tag} class="readme-list">${items.join('')}</${tag}>`);
             continue;
         }
-        // Four-space indented code block.
         if (/^ {4}/.test(line)) {
             flushParagraph(paragraph);
             const body = [];

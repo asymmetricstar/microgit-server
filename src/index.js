@@ -9,9 +9,6 @@ import { closeDatabases } from './data/db.js';
 import { createServer } from './http/server.js';
 import { ensureStorage } from './repositories/store.js';
 import { runSettingsEditor } from './settings-cli.js';
-// A single unhandled rejection would otherwise take the whole server down with
-// Node's default behaviour. Log it and keep serving; the exit code tells a
-// supervisor the process is unhealthy.
 process.on('unhandledRejection', (reason) => {
     console.error('[git-server] unhandled promise rejection:', reason);
     process.exitCode = 1;
@@ -78,8 +75,6 @@ async function main() {
                 closeDatabases();
                 process.exit(0);
             });
-            // An in-flight git push can hold the socket open indefinitely; cut
-            // everything loose after 5s and force the exit after 10s as a last resort.
             const cut = setTimeout(() => server.closeAllConnections(), 5_000);
             const halt = setTimeout(() => process.exit(0), 10_000);
             cut.unref();

@@ -1,4 +1,5 @@
 import { authenticateUser, isAdminUser } from '../accounts/users.js';
+import { userForToken } from '../accounts/sessions.js';
 import { RepoError } from '../config/errors.js';
 import { auditFor } from '../http/audit.js';
 import { normalizeOwner, slugify } from '../repositories/naming.js';
@@ -6,7 +7,6 @@ import { findRepo } from '../repositories/store.js';
 import { isPushRequest, parseBasicAuth } from '../security/auth.js';
 import { handleGitRequest } from './backend.js';
 export function parseGitPath(pathname) {
-    // Handle URL format: http://<ip>/<user>/<repo>.git or https://<domain>/<user>/<repo>.git
     let normalizedPathname = pathname;
     if (normalizedPathname.startsWith('http://') || normalizedPathname.startsWith('https://')) {
         try {
@@ -14,10 +14,8 @@ export function parseGitPath(pathname) {
             normalizedPathname = url.pathname;
         }
         catch {
-            // Fall through to default parsing
         }
     }
-    // Remove leading/trailing slashes and .git extension
     normalizedPathname = normalizedPathname.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '');
     const segments = normalizedPathname.split('/').filter(Boolean);
     if (segments.length < 2) {
@@ -33,12 +31,18 @@ export function parseGitPath(pathname) {
         rest: restSegments.length > 0 ? `/${restSegments.join('/')}` : '',
     };
 }
-/** Everything a git request needs from the caller, resolved once. */
 export async function gitCaller(req) {
     const basic = parseBasicAuth(req);
     if (!basic)
         return null;
-    return authenticateUser(basic.username, basic.password);
+    const user = await authenticateUser(basic.username, basic.password);
+    if (user)
+        return user;
+    const tokenUser = userForToken(basic.password);
+    if (tokenUser && tokenUser.username.toLowerCase() === basic.username.trim().toLowerCase()) {
+        return tokenUser;
+    }
+    return null;
 }
 export async function handleGit(req, res, url, pathname) {
     const target = parseGitPath(pathname);

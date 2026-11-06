@@ -3,9 +3,7 @@ import { caches } from '../data/cache.js';
 import { usersDb } from '../data/db.js';
 import { sealSecret, verifyPassword } from '../security/auth.js';
 const USERNAME_PATTERN = /^[a-z0-9][a-z0-9._-]{1,30}[a-z0-9]$/;
-/** First URL segments the server answers itself, so no account may take them. */
 const RESERVED_USERNAMES = new Set(['api', 'health', 'metrics']);
-/** Lower-case and validate a username; it is also used as the Basic auth name. */
 export function normalizeUsername(input) {
     if (typeof input !== 'string') {
         throw new RepoError(400, "'username' is required and must be a string");
@@ -19,7 +17,6 @@ export function normalizeUsername(input) {
     }
     return username;
 }
-/** Validate the account password. */
 export function normalizePassword(input) {
     if (typeof input !== 'string') {
         throw new RepoError(400, "'password' is required and must be a string");
@@ -43,7 +40,6 @@ export function findUserByUsername(username) {
         .get(username);
     return row ?? null;
 }
-/** Create an account. The first account created becomes an administrator. */
 export async function registerUser(rawUsername, rawPassword) {
     const username = normalizeUsername(rawUsername);
     const password = normalizePassword(rawPassword);
@@ -63,10 +59,7 @@ export async function registerUser(rawUsername, rawPassword) {
         createdAt: created,
     };
 }
-/** A stored salt/hash to compare against when the username does not exist, so a
- *  login miss costs the same scrypt work as a wrong password. */
 const DUMMY_SECRET = { salt: '00'.repeat(16), hash: '00'.repeat(32) };
-/** Check a username/password pair; `null` means "wrong credentials". */
 export async function authenticateUser(rawUsername, rawPassword) {
     const username = typeof rawUsername === 'string' ? rawUsername.trim().toLowerCase() : '';
     const password = typeof rawPassword === 'string' ? rawPassword : '';
@@ -78,14 +71,9 @@ export function countUsers() {
     const row = usersDb().prepare('SELECT COUNT(*) AS count FROM users').get();
     return Number(row.count);
 }
-/**
- * Administrators live only in the database (`users.is_admin`), so there is one
- * source of truth: no settings file can grant or take the flag away.
- */
 export function isAdminUser(user) {
     return user.isAdmin;
 }
-/** Every account, oldest first. Passwords and salts never leave this module. */
 export function listUsers() {
     const rows = usersDb()
         .prepare('SELECT id, username, is_admin, created_at FROM users ORDER BY id')
@@ -103,12 +91,6 @@ export function countAdmins() {
         .get();
     return Number(row.count);
 }
-/**
- * Grant or revoke the administrator flag. The last administrator cannot be
- * demoted, otherwise nobody could manage repositories or read the audit trail.
- * Sessions are cached for a few seconds, so the cache is cleared to make the
- * change visible on the very next request.
- */
 export function setAdmin(rawUsername, isAdmin) {
     const username = normalizeUsername(rawUsername);
     const row = findUserByUsername(username);
@@ -124,12 +106,6 @@ export function setAdmin(rawUsername, isAdmin) {
     }
     return { id: row.id, username: row.username, isAdmin, createdAt: row.created_at };
 }
-/**
- * Startup safety net: accounts are the only source of admin rights, so if the
- * flag is missing everywhere (an imported or restored database) the oldest
- * account is promoted instead of leaving the server without an administrator.
- * Returns the promoted username, or `null` when nothing changed.
- */
 export function ensureAdminExists() {
     if (countUsers() === 0 || countAdmins() > 0)
         return null;

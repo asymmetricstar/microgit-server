@@ -40,16 +40,13 @@ export function sendBuffer(res, status, data, contentType) {
     });
     res.end(data);
 }
-/** A browser navigation accepts HTML; git and curl do not ask for it. */
 function wantsHtmlPage(req) {
     return (header(req, 'accept') ?? '').toLowerCase().includes('text/html');
 }
-/** `/api/...` answers JSON to every client, browser or not. */
 function isApiPath(req) {
     const url = req.url ?? '/';
     return url.split('?', 1)[0].startsWith('/api/');
 }
-/** Short readable title for the warning page. */
 function statusTitle(status) {
     switch (status) {
         case 400:
@@ -74,10 +71,6 @@ function statusTitle(status) {
             return status >= 500 ? 'Server error' : `Error ${status}`;
     }
 }
-/**
- * Errors reach the caller as a simple warning page in the browser; the API and
- * git clients keep the JSON body they parse.
- */
 export function sendError(req, res, error) {
     if (res.headersSent) {
         res.destroy();
@@ -101,7 +94,6 @@ export function sendError(req, res, error) {
     }
     sendJson(res, status, { error: message });
 }
-/** Refuse a known path with the methods it does accept. */
 export function methodNotAllowed(req, res, allow) {
     res.setHeader('Allow', allow);
     sendError(req, res, new RepoError(405, 'Method not allowed'));

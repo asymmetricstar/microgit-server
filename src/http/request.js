@@ -1,8 +1,6 @@
 import { config } from '../config/config.js';
 import { RepoError, isBlank } from '../config/errors.js';
-/** Largest JSON body the API accepts; git bodies are streamed to git itself. */
 const MAX_API_BODY = 64 * 1024;
-/** Absolute origin for clone URLs and generated links. */
 export function originFor(req) {
     if (config.publicUrl)
         return config.publicUrl;
@@ -14,21 +12,18 @@ export function originFor(req) {
         `${config.host}:${config.port}`;
     return `${proto}://${host}`;
 }
-/** First value of a request header, or `null`. */
 export function header(req, name) {
     const value = req.headers[name];
     if (Array.isArray(value))
         return value[0] ?? null;
     return typeof value === 'string' ? value : null;
 }
-/** Caller address, honouring `X-Forwarded-For` only for a trusted proxy. */
 export function clientIp(req) {
     const forwarded = config.trustProxy ? header(req, 'x-forwarded-for') : null;
     if (forwarded)
         return forwarded.split(',')[0].trim();
     return req.socket.remoteAddress ?? '';
 }
-/** Percent-decode and reject anything that could escape the repositories root. */
 export function decodePathname(raw) {
     let decoded;
     try {
@@ -49,24 +44,13 @@ export function decodePathname(raw) {
     }
     return decoded;
 }
-/**
- * True for a path segment that may resolve to `.` or `..`.
- *
- * Win32 trims trailing dots and spaces from every path component, so `.. ` is
- * the parent directory and a segment made only of dots or spaces collapses;
- * comparing the raw segment alone would let such a request escape the root
- * (git's own `daemon_avoid_alias` check does not catch this either).
- */
 function isTraversalSegment(segment) {
     const folded = segment.replace(/[. ]+$/, '');
     if (folded === '')
         return segment !== '';
     return folded === '.' || folded === '..';
 }
-/** Read and parse a bounded JSON object body. */
 export async function readJsonBody(req) {
-    // Refuse a declared size before reading a byte; Node discards the rest of
-    // the request once the error response is written.
     const declared = Number(req.headers['content-length']);
     if (Number.isFinite(declared) && declared > MAX_API_BODY) {
         throw new RepoError(413, 'Request body too large');
@@ -93,7 +77,6 @@ export async function readJsonBody(req) {
     }
     return parsed;
 }
-/** A field the caller must send: missing, `null`, blank or non-string is a 400. */
 export function requiredField(payload, key) {
     const value = payload[key];
     if (isBlank(value))
@@ -102,7 +85,6 @@ export function requiredField(payload, key) {
         throw new RepoError(400, `'${key}' must be a string`);
     return value;
 }
-/** Optional boolean field: missing means the fallback, anything else must be a boolean. */
 export function booleanField(payload, key, fallback) {
     const value = payload[key];
     if (value === undefined || value === null)

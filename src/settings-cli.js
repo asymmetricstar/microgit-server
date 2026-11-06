@@ -68,12 +68,10 @@ function showHelp() {
     console.log(`  ${dim('Values are written to settings.json. host/port/dataDir/reposDir need a restart.')}`);
     console.log('');
 }
-/** Interactive (or piped) settings editor. Zero external dependencies. */
 export async function runSettingsEditor() {
     ensureSettingsFile();
     const raw = readSettingsRaw();
     const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
-    // Piped (non-interactive) mode: read all lines then apply in order.
     if (!isTTY) {
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         const lines = [];
@@ -110,7 +108,6 @@ export async function runSettingsEditor() {
         }
         return;
     }
-    // Interactive menu mode with native readline (no enquirer).
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     try {
         let changed = false;
@@ -123,7 +120,6 @@ export async function runSettingsEditor() {
                 const field = EDITABLE[i];
                 const current = raw[field.key];
                 const rawDisplay = current === undefined || current === null ? '' : String(current);
-                // Keep one line: strip line breaks and collapse whitespace.
                 const display = rawDisplay.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
                 console.log(`  ${String(i + 1).padStart(2, ' ')}. ${field.label} - ${field.hint}  ${dim('[' + (display === '' ? '(empty)' : display) + ']')}`);
             }

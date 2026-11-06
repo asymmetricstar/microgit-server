@@ -1,9 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-/**
- * The settings file is the one path that cannot come from the settings file
- * itself; everything else (address, directories, template, MOTD) is in there.
- */
 const SETTINGS_FILE = path.resolve(process.cwd(), process.env.GIT_SETTINGS_FILE ?? 'settings.json');
 const DEFAULTS = {
     host: '127.0.0.1',
@@ -57,24 +53,17 @@ function normalize(raw) {
         cacheTtlMs: integer('cacheTtlMs', 0, 86_400_000, DEFAULTS.cacheTtlMs),
     };
 }
-/** Create `settings.json` if it does not exist, so an admin can edit it. */
 export function ensureSettingsFile() {
     if (fs.existsSync(SETTINGS_FILE))
         return;
     fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
     const body = `${JSON.stringify(DEFAULTS, null, 2)}\n`;
     fs.writeFileSync(SETTINGS_FILE, body, { encoding: 'utf8' });
-    // Written once, then owned by the administrator.
     cache = { settings: { ...DEFAULTS }, mtimeMs: fs.statSync(SETTINGS_FILE).mtimeMs };
 }
-/** Absolute path of the settings file (from `GIT_SETTINGS_FILE`, else CWD). */
 export function settingsFilePath() {
     return SETTINGS_FILE;
 }
-/**
- * Current settings. The file is read again whenever its mtime changes, so an
- * edit takes effect without a restart.
- */
 export function getSettings() {
     let stat;
     try {
@@ -91,7 +80,6 @@ export function getSettings() {
         text = fs.readFileSync(SETTINGS_FILE, 'utf8');
     }
     catch (error) {
-        // An unreadable file keeps the last known-good settings as well.
         if (cache)
             return cache.settings;
         throw new Error(`Cannot read settings file '${SETTINGS_FILE}': ${error.message}`);
@@ -101,8 +89,6 @@ export function getSettings() {
         parsed = JSON.parse(text);
     }
     catch (error) {
-        // Corrupt settings must not take the whole server down: keep serving the
-        // last known-good values until the file is repaired.
         if (cache)
             return cache.settings;
         throw new Error(`settings file '${SETTINGS_FILE}' is not valid JSON: ${error.message}`);
@@ -111,12 +97,10 @@ export function getSettings() {
     cache = { settings, mtimeMs: stat.mtimeMs };
     return settings;
 }
-/** Values safe to show to any client. */
 export function publicSettings() {
     const settings = getSettings();
     return { allowRegistration: settings.allowRegistration, motd: settings.motd };
 }
-/** Test helper: forget the cached settings so the file is re-read. */
 export function resetSettingsCache() {
     cache = null;
 }

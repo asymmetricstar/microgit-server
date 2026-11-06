@@ -43,7 +43,6 @@ export async function route(req, res) {
         handleAsset(res, 'logo.png', 'image/png');
         return;
     }
-    // Generic asset route: /assets/<file> (e.g. /assets/cli-terminal.png).
     if (pathname.startsWith('/assets/') && isRead) {
         const file = pathname.slice('/assets/'.length);
         if (file === '' || file.includes('/') || file.includes('\\')) {
@@ -147,22 +146,14 @@ export async function route(req, res) {
         }
         throw new RepoError(404, 'Not found');
     }
-    // An unknown `/api/...` path never falls through to the pages or git: the
-    // API answers JSON to every client, browsers included.
     if (pathname.startsWith('/api/')) {
         throw new RepoError(404, 'Not found');
     }
-    // `/alice/app/`, `/alice/app.git`, `/alice/app/tree/src/` and
-    // `/alice/app/blob/src/index.ts` are rendered from the bare repository; the
-    // handler redirects to the canonical form so links stay stable.
     const page = repoPageTarget(pathname);
     if (page && isRead) {
         await handleRepositoryPage(req, res, base, page);
         return;
     }
-    // Everything else is handed to `git http-backend`: `info/refs`,
-    // `git-upload-pack`, `git-receive-pack` and the dumb-protocol file paths.
-    // The URL carries user and name; the backend only ever sees `<hash>/<name>.git`.
     await handleGit(req, res, url, pathname);
 }
 //# sourceMappingURL=router.js.map

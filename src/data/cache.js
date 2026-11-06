@@ -1,11 +1,3 @@
-/**
- * A tiny in-memory TTL cache. No dependency, no timers: expired entries are
- * dropped when they are read or when the map is swept, so an idle process never
- * wakes up just to evict.
- *
- * Insertion order doubles as LRU order: a hit moves the key to the end, and
- * eviction drops the oldest entry first.
- */
 export class TtlCache {
     maxEntries;
     defaultTtlMs;
@@ -22,12 +14,10 @@ export class TtlCache {
             this.entries.delete(key);
             return undefined;
         }
-        // Refresh recency so hot keys survive eviction.
         this.entries.delete(key);
         this.entries.set(key, hit);
         return hit.value;
     }
-    /** Return the cached value, or compute and store it. Rejections are not cached. */
     async remember(key, work, ttlMs = this.defaultTtlMs) {
         const hit = this.get(key);
         if (hit !== undefined)
@@ -47,14 +37,12 @@ export class TtlCache {
     clear() {
         this.entries.clear();
     }
-    /** Drop every entry whose key starts with a prefix (used for whole-repo groups). */
     deletePrefix(prefix) {
         for (const key of this.entries.keys()) {
             if (key.startsWith(prefix))
                 this.entries.delete(key);
         }
     }
-    /** Remove expired entries; returns how many were dropped. */
     sweep() {
         const now = Date.now();
         let removed = 0;
@@ -75,11 +63,8 @@ export class TtlCache {
             this.entries.delete(oldest.value);
     }
 }
-/** Cache groups used by the server, all invalidated explicitly on writes. */
 export const caches = {
-    /** `owner\0name` -> repository row (also caches misses as `null`). */
     repo: new TtlCache(2000, 5000),
-    /** session token hash -> user id (`null` caches an invalid token). */
     session: new TtlCache(2000, 30_000),
 };
 export function cacheStats() {

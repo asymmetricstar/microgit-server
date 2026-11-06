@@ -15,7 +15,6 @@ export const ICONS = {
     copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2.5" y="2.5" width="8" height="8" rx="1.5"/><path d="M6 5.5H12.5A1.5 1.5 0 0 1 14 7v6a1.5 1.5 0 0 1-1.5 1.5H6"/></svg>',
     crumbFolder: `<svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="${FOLDER_PATH}"/></svg>`,
 };
-/** Relative time, e.g. `2 hours ago`. */
 export function relativeTime(iso, now = Date.now()) {
     const then = Date.parse(iso);
     if (!Number.isFinite(then))
@@ -38,7 +37,6 @@ export function relativeTime(iso, now = Date.now()) {
     const years = Math.round(months / 12);
     return `${years} ${years === 1 ? 'year' : 'years'} ago`;
 }
-/** Human readable disk size: `820 B`, `41.3 KB`, `4.2 MB`. */
 export function formatSize(bytes) {
     if (bytes < 1024)
         return `${bytes} B`;
@@ -51,13 +49,6 @@ export function formatSize(bytes) {
     }
     return `${value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
 }
-// ---------------------------------------------------------------------------
-// Links
-//
-// The repository identity is shown as `owner@name.git`; directories live under
-// `/blob/`-style routes so every row in the tree is a real URL that the server
-// resolves from git, not a client side placeholder.
-// ---------------------------------------------------------------------------
 function encoded(value) {
     return encodeURIComponent(value);
 }
@@ -77,13 +68,6 @@ function readmeUrl(data) {
     const base = treeUrl(data.owner, data.name, data.overview.dir);
     return data.raw ? base : `${base}?raw=1`;
 }
-// ---------------------------------------------------------------------------
-// Breadcrumb
-//
-// One bar, always rendered in the same slot — right under the action row and
-// above the content box — so the trail never jumps between the repository home,
-// a directory and a file. The last segment is always the current location.
-// ---------------------------------------------------------------------------
 function breadcrumbBar(data) {
     const root = repoUrl(data.owner, data.name);
     const dir = data.overview.dir;
@@ -725,7 +709,6 @@ function commitRowHeader(commit) {
 }
 function fileRows(data) {
     const { overview } = data;
-    // Directories first, like every repository browser; git's order is stable.
     const ordered = [...overview.entries].sort((a, b) => Number(b.isDirectory) - Number(a.isDirectory));
     return ordered
         .map((entry) => {
@@ -769,7 +752,6 @@ function readmeBox(data) {
     <div class="readme-box-body">${body}</div>
   </div>`;
 }
-/** Human readable language name from a path such as `src/index.tsx`. */
 function languageLabel(filePath) {
     const base = filePath.split('/').pop() ?? filePath;
     const dot = base.lastIndexOf('.');
@@ -821,12 +803,10 @@ function languageLabel(filePath) {
     };
     return Object.prototype.hasOwnProperty.call(known, ext) ? known[ext] : 'Plain text';
 }
-/** The lines that will be shown, with a single trailing newline dropped. */
 function shownText(file) {
     const text = (file.text ?? '').replace(/\n$/, '');
     return { text, lines: text === '' ? 1 : text.split('\n').length };
 }
-/** Copy button and its small inline handler; shared by the preview header. */
 const COPY_SCRIPT = `<script>
 (function () {
   var button = document.getElementById('copy-code');
@@ -863,8 +843,6 @@ const COPY_SCRIPT = `<script>
   });
 })();
 </script>`;
-/** A minimal, dependency-free highlighter: it recolours the plain text the
- *  server already sent, so the page still reads correctly with scripts off. */
 const HIGHLIGHT_SCRIPT = String.raw `<script>
 (function () {
   var box = document.getElementById('code-content');
@@ -1052,7 +1030,6 @@ const HIGHLIGHT_SCRIPT = String.raw `<script>
   box.innerHTML = html;
 })();
 </script>`;
-/** The code preview card: header, toolbar, gutter, code and commit footer. */
 function previewBox(data, file) {
     const rawHref = blobUrl(data.owner, data.name, file.path, true);
     const header = (badge, actions) => `  <div class="preview-box-header">
@@ -1112,7 +1089,6 @@ ${footer}
 ${COPY_SCRIPT}
 ${HIGHLIGHT_SCRIPT}`;
 }
-/** The Git clone URL with its show/copy row; shared by the repo page and the landing page. */
 export function cloneControls(cloneUrl) {
     return `<button class="btn-code" id="clone-toggle" type="button" title="Show the Git remote">${ICONS.link} Git URL</button>
 <div class="clone-input-wrap" id="clone-wrap">
@@ -1136,8 +1112,6 @@ export function cloneControls(cloneUrl) {
 </script>`;
 }
 export function shell(title, body, headerRight) {
-    // Brand and tagline come from settings.json, never from this file; the tab
-    // title is the page name followed by the brand.
     const { brand } = getSettings();
     const right = headerRight !== undefined ? headerRight : '<a class="header-link" href="/#quickstart">Quick start</a>';
     return `<!doctype html>
@@ -1193,8 +1167,6 @@ export function repositoryPage(data) {
     const lastLine = lastCommit
         ? `<span>· ${fileCount} ${fileCount === 1 ? 'item' : 'items'} in ${where} · last updated ${escapeHtml(relativeTime(lastCommit.date))}</span>`
         : '<span>· empty repository</span>';
-    // The identity stays in the top bar; the breadcrumb sits in one fixed slot
-    // above the content box on every repository page, so it never jumps.
     const body = `<div class="repo-title-row">
   <a class="repo-title-left" href="${escapeHtml(repoUrl(data.owner, data.name))}">
     <h1>${ICONS.repo}${escapeHtml(data.name)}</h1>
@@ -1212,7 +1184,6 @@ ${file ? previewBox(data, file) : `${list}${readmeBox(data)}`}
     const headerRight = `<a class="header-link" href="${escapeHtml(repoUrl(data.owner, data.name))}">${escapeHtml(label)}</a>`;
     return shell(label, body, headerRight);
 }
-/** Plain 404/500 page in the same shell, used instead of a JSON error. */
 export function errorPage(title, message) {
     const body = `<div class="repo-title-row">
   <div class="repo-title-left"><h1>${ICONS.repo}${escapeHtml(title)}</h1></div>

@@ -2,7 +2,6 @@ import { getSettings } from '../config/settings.js';
 import { usersDb } from '../data/db.js';
 import { caches } from '../data/cache.js';
 import { hashToken, newToken } from '../security/auth.js';
-/** Issue a session token. Only its SHA-256 digest is stored. */
 export function createSession(user) {
     const settings = getSettings();
     const token = newToken(32);
@@ -13,7 +12,6 @@ export function createSession(user) {
         .run(hashToken(token), user.id, now.toISOString(), expires.toISOString());
     return { token, expiresAt: expires.toISOString() };
 }
-/** Resolve a session token to its user, honouring expiry. Cached for a few seconds. */
 export function userForToken(token) {
     const key = `sess:${hashToken(token)}`;
     const cached = caches.session.get(key);
@@ -37,7 +35,6 @@ export function userForToken(token) {
     caches.session.set(key, user, ttl);
     return user;
 }
-/** Drop one session immediately (logout) and forget it from the cache. */
 export function revokeSession(token) {
     const result = usersDb()
         .prepare('DELETE FROM sessions WHERE token_hash = ?')
@@ -45,7 +42,6 @@ export function revokeSession(token) {
     caches.session.delete(`sess:${hashToken(token)}`);
     return Number(result.changes) > 0;
 }
-/** Delete expired sessions; run at startup and after each login. */
 export function purgeExpiredSessions() {
     const result = usersDb()
         .prepare('DELETE FROM sessions WHERE expires_at <= ?')

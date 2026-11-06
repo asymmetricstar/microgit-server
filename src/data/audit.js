@@ -1,5 +1,4 @@
 import { usersDb } from './db.js';
-/** Append one line to the audit trail. Never throws: auditing must not break a request. */
 export function recordAudit(entry) {
     try {
         usersDb()
