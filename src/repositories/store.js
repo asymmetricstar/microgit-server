@@ -63,8 +63,9 @@ export function listRepos(filter = {}) {
             where.push('is_private = 0');
         }
         else if (!viewer.isAdmin) {
-            where.push('(is_private = 0 OR owner_id = ?)');
-            params.push(viewer.userId);
+            where.push(`(is_private = 0 OR owner_id = ? OR
+          EXISTS (SELECT 1 FROM repo_members m WHERE m.repo_id = repos.id AND m.user_id = ?))`);
+            params.push(viewer.userId, viewer.userId);
         }
     }
     const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';

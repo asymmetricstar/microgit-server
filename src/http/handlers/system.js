@@ -33,9 +33,12 @@ export function handleAsset(res, name, contentType) {
     });
     res.end(data);
 }
+function repositoryCount() {
+    return listRepos({ limit: 1 }).total;
+}
 export function handleRoot(res, base) {
     sendHtml(res, 200, landingPage(base, {
-        repositories: listRepos({ limit: 1, viewer: null }).total,
+        repositories: repositoryCount(),
         users: countUsers(),
         sessions: countSessions(),
     }));
@@ -45,7 +48,7 @@ export function handleHealth(res) {
         status: 'ok',
         version: SERVER_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
-        repositories: listRepos({ limit: 1, viewer: null }).total,
+        repositories: repositoryCount(),
     });
 }
 export function handleMetrics(res) {

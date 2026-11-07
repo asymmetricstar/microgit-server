@@ -1,6 +1,6 @@
-import { isAdminUser } from '../../accounts/users.js';
 import { readFile, readCommitDiff, readOverview, readRecentCommits, gitBuffer } from '../../git/inspect.js';
-import { commitsPage, commitDiffPage, errorPage, repositoryPage } from '../pages/repository.js';
+import { commitsPage, commitDiffPage, errorPage, privateRepoPage, repositoryPage } from '../pages/repository.js';
+import { canViewRepo } from '../../repositories/access.js';
 import { cloneUrlFor, findRepo } from '../../repositories/store.js';
 import { sendHtml, sendText, sendBuffer } from '../response.js';
 import { currentUser } from '../session.js';
@@ -98,13 +98,10 @@ export async function handleRepositoryPage(req, res, base, target) {
         notFound();
         return;
     }
-    if (repo.isPrivate) {
-        const user = currentUser(req);
-        const allowed = user !== null && (user.id === repo.ownerId || isAdminUser(user));
-        if (!allowed) {
-            notFound();
-            return;
-        }
+    const viewer = currentUser(req);
+    if (!canViewRepo(repo, viewer)) {
+        sendHtml(res, 403, privateRepoPage(repo.owner, repo.name, viewer !== null));
+        return;
     }
     const raw = url.searchParams.get('raw') === '1';
     if (target.kind === 'blob') {

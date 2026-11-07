@@ -74,8 +74,8 @@ Git URLs keep working next to the page: `git clone` uses the protocol paths belo
 `/alice/app.git` (`info/refs`, `git-upload-pack`, …), which `git http-backend`
 still handles. Opening the bare clone URL in a browser redirects to the page, so
 `/alice/app.git` lands on `/alice/app/` instead of a blank response. A private
-repository's page answers `404` unless the owner or an administrator is signed in
-with a session cookie. Markdown is rendered by a small built-in renderer
+repository's page answers `404` unless the caller is the owner, an administrator
+or a member with `read` access who is signed in with a session cookie. Markdown is rendered by a small built-in renderer
 (headings, paragraphs, lists, quotes, code, links, bold, italics, images, tables,
 task lists, strikethrough, callouts) — no dependency was added for it.
 
@@ -93,6 +93,27 @@ account. The first account created on a fresh server is an administrator.
 - If the database ends up with no administrator at all (restored or imported
   `users.db`), the oldest account is promoted at startup and the log says so.
 
+## Repository access
+
+A repository belongs to its owner. The owner (and any administrator) can hand
+access out to other accounts without sharing the account itself, through the
+`repo_members` table in `data/repo.db`:
+
+- `read` — open the repository page, clone and fetch
+- `write` — everything `read` does, plus push
+
+The roles are cumulative: granting `write` never takes read away.
+
+The owner and administrators are never stored as members, because they already
+hold every right. Granting the same account twice is not an error: the role is
+updated and the answer is `200` instead of `201`. Revoking removes the row.
+Deleting a repository removes its members with it (`ON DELETE CASCADE`).
+
+A private repository answers `404` to callers it would not show itself to — on
+the page, on the API and on the git protocol — so membership cannot be used to
+probe which private repositories exist. Memberships are audited as
+`repo.member.add`, `repo.member.update` and `repo.member.remove`.
+
 ## API reference
 
 | Method | Path | Auth | Purpose |
@@ -106,6 +127,9 @@ account. The first account created on a fresh server is an administrator.
 | DELETE | `/api/repos/<owner>/<name>` | Session | Delete a repository (REST) |
 | GET | `/api/repos` | — | List repositories |
 | GET | `/api/repos/<owner>/<name>` | — | One repository |
+| GET | `/api/repos/<owner>/<name>/members` | — | Who else may open the repository |
+| POST | `/api/repos/<owner>/<name>/members` | Session (owner) | Grant access: `{"username":"bob","role":"read"}` |
+| DELETE | `/api/repos/<owner>/<name>/members/<username>` | Session (owner) | Revoke access |
 | GET | `/api/settings` | — | Public settings |
 | GET | `/api/users` | Session (admin) | Every account and its admin flag |
 | PATCH | `/api/users/<username>` | Session (admin) | Grant or revoke the admin flag |
@@ -117,6 +141,14 @@ account. The first account created on a fresh server is an administrator.
 
 "Session" means the `sid` cookie set by login, or an `Authorization: Bearer <token>`
 header for scripts. Git pushes use HTTP Basic with the account password instead.
+
+A member's `role` decides what the account may do with the repository: `read`
+opens the pages and allows cloning and fetching, `write` adds pushing. The owner
+and administrators are never stored as members — they already hold every right.
+Granting the same account twice is not an error: the role is updated and the
+answer is `200` instead of `201`. A private repository answers `404` to callers
+it would not show itself to, so membership cannot be used to find private
+repositories.
 
 Errors are JSON: `{"error":"..."}`. `400` invalid input, `401` no/expired
 session, `403` wrong account, `404` unknown repository, `409` name conflict,

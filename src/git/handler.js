@@ -1,7 +1,8 @@
-import { authenticateUser, isAdminUser } from '../accounts/users.js';
+import { authenticateUser } from '../accounts/users.js';
 import { userForToken } from '../accounts/sessions.js';
 import { RepoError } from '../config/errors.js';
 import { auditFor } from '../http/audit.js';
+import { canPushRepo, canViewRepo } from '../repositories/access.js';
 import { normalizeOwner, slugify } from '../repositories/naming.js';
 import { findRepo } from '../repositories/store.js';
 import { isPushRequest, parseBasicAuth } from '../security/auth.js';
@@ -59,13 +60,21 @@ export async function handleGit(req, res, url, pathname) {
         throw new RepoError(status, message);
     };
     let remoteUser;
-    if (push || repo.isPrivate) {
+    if (push) {
         const user = await gitCaller(req);
         if (!user)
             return deny(401, 'Sign in with your account username and password');
-        const isOwner = repo.ownerId !== null && repo.ownerId === user.id;
-        if (!isOwner && !isAdminUser(user)) {
-            deny(403, `Only the owner of '${label}' can access it`);
+        if (!canPushRepo(repo, user)) {
+            deny(403, `Only the owner of '${label}' or a member with write access can push to it`);
+        }
+        remoteUser = user.username;
+    }
+    else if (repo.isPrivate) {
+        const user = await gitCaller(req);
+        if (!user)
+            return deny(401, 'Sign in with your account username and password');
+        if (!canViewRepo(repo, user)) {
+            deny(403, `The repository '${label}' is private`);
         }
         remoteUser = user.username;
     }

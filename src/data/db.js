@@ -108,6 +108,22 @@ export function repoDb() {
         UNIQUE(owner, name)
       );
       CREATE INDEX IF NOT EXISTS repos_owner ON repos(owner);
+
+      -- Who else may open a repository: a private repository belongs to its
+      -- owner, but the owner can hand out access — 'read' opens it and clones
+      -- it, 'write' may also push. The owner and administrators are never
+      -- listed here; they already have every right.
+      -- There is deliberately no FOREIGN KEY on user_id: accounts live in
+      -- users.db, a different file, and SQLite cannot reference across files.
+      -- src/repositories/members.ts drops rows whose account has gone.
+      CREATE TABLE IF NOT EXISTS repo_members (
+        repo_id    INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+        user_id    INTEGER NOT NULL,
+        role       TEXT NOT NULL DEFAULT 'read' CHECK (role IN ('read', 'write')),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (repo_id, user_id)
+      );
+      CREATE INDEX IF NOT EXISTS repo_members_user ON repo_members(user_id);
     `);
     }
     return repoDatabase;

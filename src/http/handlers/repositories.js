@@ -1,6 +1,7 @@
 import { isAdminUser } from '../../accounts/users.js';
 import { RepoError, isBlank } from '../../config/errors.js';
 import { createRepo } from '../../repositories/create.js';
+import { canViewRepo } from '../../repositories/access.js';
 import { deleteRepo } from '../../repositories/delete.js';
 import { cloneUrlFor, findRepo, listRepos, readHead } from '../../repositories/store.js';
 import { auditFor } from '../audit.js';
@@ -87,12 +88,9 @@ export async function handleList(req, res, url) {
 }
 export async function handleRepoInfo(req, res, baseUrl, owner, name) {
     const repo = findRepo(owner, name);
-    const user = currentUser(req);
-    const canSee = repo !== null &&
-        (!repo.isPrivate ||
-            (user !== null && (isAdminUser(user) || user.username.toLowerCase() === repo.owner.toLowerCase())));
-    if (!canSee || !repo)
+    if (!repo || !canViewRepo(repo, currentUser(req))) {
         throw new RepoError(404, `Repository '${owner}/${name}' not found`);
+    }
     sendJson(res, 200, await repoPayload(repo, baseUrl));
 }
 //# sourceMappingURL=repositories.js.map

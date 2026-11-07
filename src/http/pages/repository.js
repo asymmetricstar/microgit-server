@@ -12,6 +12,7 @@ export const ICONS = {
     link: '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25Zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0Z"/></svg>',
     raw: '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237V12.75A1.75 1.75 0 0 1 13.25 14.5H3.75A1.75 1.75 0 0 1 2 12.75V1.75Zm1.75-.25a.25.25 0 0 0-.25.25v11a.25.25 0 0 0 .25.25h9.5a.25.25 0 0 0 .25-.25V5.5a.25.25 0 0 0-.2-.245l-2.8-2.8a.25.25 0 0 0-.18-.08H3.75Z"/></svg>',
     copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2.5" y="2.5" width="8" height="8" rx="1.5"/><path d="M6 5.5H12.5A1.5 1.5 0 0 1 14 7v6a1.5 1.5 0 0 1-1.5 1.5H6"/></svg>',
+    visibility: '<svg class="repo-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10.09,13.41Q9.3,12.63 9.3,11.5t0.79-1.91T12,8.8t1.91,0.79q0.79,0.79 0.79,1.91t-0.79,1.91T12,14.2t-1.91-0.79ZM12,19q-3.65,0-6.65-2.04Q2.35,14.93 1,11.5Q2.35,8.07 5.35,6.04T12,4q3.53,0 6.44,1.9T22.8,11H20.53q-1.3-2.33-3.58-3.66Q14.68,6 12,6Q9.18,6 6.81,7.49T3.2,11.5q1.25,2.52 3.61,4.01T12,17q0.5,0 1-0.05t1-0.15v2.02q-0.5,0.07-1,0.13T12,19Zm0-3q0.55,0 1.06-0.13t0.96-0.35q0.13-1.25 0.79-2.25t1.69-1.6q0-0.05 0-0.09t0-0.09q0-1.88-1.31-3.19T12,7T8.81,8.31T7.5,11.5t1.31,3.19T12,16Zm-0.13-4.5ZM17,21q-0.43,0-0.71-0.29Q16,20.43 16,20V17q0-0.43 0.29-0.71T17,16V15q0-0.83 0.59-1.41T19,13t1.41,0.59Q21,14.18 21,15v1q0.43,0 0.71,0.29T22,17v3q0,0.43-0.29,0.71T21,21H17Zm1-5h2V15q0-0.43-0.29-0.71T19,14t-0.71,0.29T18,15v1Z"/></svg>',
     crumbFolder: `<svg class="icon" viewBox="0 0 16 16" fill="currentColor"><path d="${FOLDER_PATH}"/></svg>`,
 };
 export function relativeTime(iso, now = Date.now()) {
@@ -154,6 +155,7 @@ const STYLES = `
   .public-badge {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     height: 22px;
     padding: 0 8px;
     border: 1px solid var(--border);
@@ -164,6 +166,8 @@ const STYLES = `
     background: var(--bg);
     white-space: nowrap;
   }
+  .public-badge svg { width: 13px; height: 13px; }
+  .public-badge.private-badge { background: #fff8c5; border-color: #d9a01c40; color: #7d4e00; }
   .repo-title-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn-lite {
     display: inline-flex;
@@ -1225,7 +1229,7 @@ export function repositoryPage(data) {
     const body = `<div class="repo-title-row">
   <a class="repo-title-left" href="${escapeHtml(repoUrl(data.owner, data.name))}">
     <h1>${ICONS.repo}${escapeHtml(data.name)}</h1>
-    <span class="public-badge">${data.isPrivate ? 'Private' : 'Public'}</span>
+    <span class="public-badge${data.isPrivate ? ' private-badge' : ''}">${data.isPrivate ? `${ICONS.visibility}Private` : 'Public'}</span>
   </a>
 </div>
 <div class="stats-line">${stats}</div>
@@ -1346,5 +1350,20 @@ export function errorPage(title, message) {
 </div>
 <div class="stats-line" style="border-bottom: 0; margin-bottom: 0"><span class="stat">${escapeHtml(message)}</span></div>`;
     return shell(title, body);
+}
+export function privateRepoPage(owner, name, signedIn) {
+    const label = `${owner}/${name}`;
+    const message = signedIn
+        ? `${label} is a private repository. Your account is not its owner and has no access to it; ask the owner to grant you access.`
+        : `${label} is a private repository. Sign in with the owner's account, or an administrator account, to open it.`;
+    const heading = 'Private repository';
+    const body = `<div class="repo-title-row">
+  <div class="repo-title-left">
+    <h1>${ICONS.visibility}${escapeHtml(name)}</h1>
+    <span class="public-badge private-badge">${ICONS.visibility}Private</span>
+  </div>
+</div>
+<div class="stats-line" style="border-bottom: 0; margin-bottom: 0"><span class="stat">${escapeHtml(message)}</span></div>`;
+    return shell(`${heading} · ${label}`, body);
 }
 //# sourceMappingURL=repository.js.map

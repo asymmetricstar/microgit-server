@@ -1,9 +1,11 @@
+import { isAdminUser } from '../accounts/users.js';
 import { RepoError } from '../config/errors.js';
 import { publicSettings } from '../config/settings.js';
 import { handleGit } from '../git/handler.js';
 import { handleAudit } from './handlers/audit.js';
 import { handleMe } from './handlers/account.js';
 import { handleLogin, handleLogout, handleRegister } from './handlers/auth.js';
+import { handleMemberAdd, handleMemberList, handleMemberRemove } from './handlers/members.js';
 import { handleAsset, handleHealth, handleMetrics, handleRoot } from './handlers/system.js';
 import { reposPage } from './pages/repos.js';
 import { handleDelete, handleList, handleNew, handleRepoInfo, } from './handlers/repositories.js';
@@ -11,6 +13,7 @@ import { handleRepositoryPage, repoPageTarget } from './handlers/repository-page
 import { handleUserAdmin, handleUsers } from './handlers/users.js';
 import { decodePathname, originFor } from './request.js';
 import { methodNotAllowed, sendHtml, sendJson } from './response.js';
+import { currentUser } from './session.js';
 export async function route(req, res) {
     const rawUrl = req.url ?? '/';
     let url;
@@ -29,7 +32,8 @@ export async function route(req, res) {
         return;
     }
     if (pathname === '/repos' && isRead) {
-        sendHtml(res, 200, reposPage(base));
+        const viewer = currentUser(req);
+        sendHtml(res, 200, reposPage(base, viewer ? { userId: viewer.id, isAdmin: isAdminUser(viewer) } : null));
         return;
     }
     if (pathname === '/health' && isRead) {
@@ -136,9 +140,28 @@ export async function route(req, res) {
     }
     if (pathname.startsWith('/api/repos/')) {
         const segments = pathname.slice('/api/repos/'.length).split('/');
-        if (segments.length === 2 && segments[0] !== '' && segments[1] !== '') {
-            const [owner, rawName] = segments;
-            const name = rawName.toLowerCase().endsWith('.git') ? rawName.slice(0, -4) : rawName;
+        const [owner, rawName] = segments;
+        const addressed = segments.length >= 2 && owner !== '' && rawName !== '';
+        const name = addressed && rawName.toLowerCase().endsWith('.git') ? rawName.slice(0, -4) : rawName;
+        if (addressed && segments.length === 3 && segments[2] === 'members') {
+            if (method === 'POST') {
+                await handleMemberAdd(req, res, owner, name);
+                return;
+            }
+            if (isRead) {
+                handleMemberList(req, res, owner, name);
+                return;
+            }
+            return methodNotAllowed(req, res, 'GET, HEAD, POST');
+        }
+        if (addressed && segments.length === 4 && segments[2] === 'members' && segments[3] !== '') {
+            if (method === 'DELETE') {
+                handleMemberRemove(req, res, owner, name, segments[3]);
+                return;
+            }
+            return methodNotAllowed(req, res, 'DELETE');
+        }
+        if (segments.length === 2 && addressed) {
             if (method === 'DELETE') {
                 await handleDelete(req, res, owner, name);
                 return;
