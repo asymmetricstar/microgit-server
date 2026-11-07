@@ -2,9 +2,9 @@ import { getSettings } from '../../config/settings.js';
 import { SERVER_VERSION } from '../../config/version.js';
 import { escapeHtml } from './html.js';
 import { pageShell } from './layout.js';
-const STYLE = `:root{--bg:#f6f8fa;--bg-panel:#ffffff;--border:#d0d7de;--text:#24292f;--text-secondary:#57606a;--text-muted:#8c959d;--blue:#0969da;--blue-hover:#0550ae;--blue-bg:#e7f5ff;--green:#1a7f37;--green-bg:#dafbe1;--radius:8px}
+const STYLE = `:root{ --bg:#f6f8fa;--bg-panel:#ffffff;--border:#d0d7de;--text:#24292f;--text-secondary:#57606a;--text-muted:#8c959d;--blue:#0969da;--blue-hover:#0550ae;--blue-bg:#e7f5ff;--green:#1a7f37;--green-bg:#dafbe1;--radius:8px}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{ margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
 a{color:var(--blue);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:960px;margin:0 auto;padding:0 20px}
