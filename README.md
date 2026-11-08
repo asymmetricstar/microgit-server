@@ -217,6 +217,8 @@ Precedence for the public origin is `PUBLIC_URL` (environment) â†’ `publicUrl` â
 `publicUrl` or `domain`; if `publicUrl` is already set, it wins. Restart the
 server after changing either one.
 
+## Install
+![Test video](install.gif)
 
 ## manuel repo push curl+git (commit,push,pull) 
 Please Read to `manuel-git-usage.md`
