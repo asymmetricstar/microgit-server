@@ -6,10 +6,6 @@ Lightweight self-hosted git server
 npm install -g microgit-server
 ```
 
-## Install & Usage Video
-https://youtu.be/uw2jVIkdNSA
-
-
 ## Run the server
 ```bash
 microgit-server                  # uses settings.json in the current directory
