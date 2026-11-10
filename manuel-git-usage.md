@@ -92,3 +92,6 @@ git push http://alice:alicepass1@127.0.0.1:3000/alice/app.git main
 ```bash
 git pull # or: git fetch origin && git merge origin/main
 ```
+
+## Install & Usage Video
+https://youtu.be/uw2jVIkdNSA
